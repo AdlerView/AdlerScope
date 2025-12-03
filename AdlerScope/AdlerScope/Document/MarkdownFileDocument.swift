@@ -8,16 +8,17 @@ import UniformTypeIdentifiers
 enum DocumentContentType: Equatable, Sendable {
     case markdown
     case pdf
+    case image
 }
 
-/// Pure SwiftUI FileDocument implementation for markdown and PDF files
+/// Pure SwiftUI FileDocument implementation for markdown, PDF, and image files
 /// Used with DocumentGroup for native macOS document handling
 struct MarkdownFileDocument: FileDocument {
     // MARK: - Content Types
 
     /// Types that can be read by this document
     static var readableContentTypes: [UTType] {
-        [.markdown, .plainText, .rMarkdown, .quarto, .pdf]
+        [.markdown, .plainText, .rMarkdown, .quarto, .pdf, .image]
     }
 
     /// Types that can be written by this document (PDFs are read-only)
@@ -36,6 +37,9 @@ struct MarkdownFileDocument: FileDocument {
     /// PDF data (only valid when contentType == .pdf)
     let pdfData: Data?
 
+    /// Image data (only valid when contentType == .image)
+    let imageData: Data?
+
     /// PDF document for viewing (computed, only valid when contentType == .pdf)
     var pdfDocument: PDFDocument? {
         guard let data = pdfData else { return nil }
@@ -44,8 +48,12 @@ struct MarkdownFileDocument: FileDocument {
 
     /// Check if this document is a PDF
     var isPDF: Bool {
-        if case .pdf = contentType { return true }
-        return false
+        contentType == .pdf
+    }
+
+    /// Check if this document is an image
+    var isImage: Bool {
+        contentType == .image
     }
 
     // MARK: - Initialization
@@ -55,6 +63,7 @@ struct MarkdownFileDocument: FileDocument {
         self.contentType = .markdown
         self.content = content
         self.pdfData = nil
+        self.imageData = nil
     }
 
     /// Loads document from file (for Finder open, Cmd+O, etc.)
@@ -78,10 +87,18 @@ struct MarkdownFileDocument: FileDocument {
             self.contentType = .pdf
             self.content = ""
             self.pdfData = data
+            self.imageData = nil
+        } else if configuration.contentType.conforms(to: .image) {
+            // Handle as image file
+            self.contentType = .image
+            self.content = ""
+            self.pdfData = nil
+            self.imageData = data
         } else {
             // Handle as text/markdown
             self.contentType = .markdown
             self.pdfData = nil
+            self.imageData = nil
 
             // Try UTF-8 first, fallback to other encodings
             if let string = String(data: data, encoding: .utf8) {
@@ -97,12 +114,21 @@ struct MarkdownFileDocument: FileDocument {
     // MARK: - Serialization
 
     /// Saves document to file (autosave, Cmd+S, etc.)
-    /// Note: PDFs are read-only, this only saves markdown content
+    /// Note: PDFs and images are read-only, this only saves markdown content
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
         // PDFs should not be saved (read-only)
         if case .pdf = contentType {
             // Return original PDF data unchanged
             if let data = pdfData {
+                return FileWrapper(regularFileWithContents: data)
+            }
+            throw CocoaError(.fileWriteUnknown)
+        }
+
+        // Images should not be saved (read-only)
+        if case .image = contentType {
+            // Return original image data unchanged
+            if let data = imageData {
                 return FileWrapper(regularFileWithContents: data)
             }
             throw CocoaError(.fileWriteUnknown)

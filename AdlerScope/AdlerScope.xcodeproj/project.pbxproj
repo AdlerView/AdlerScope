@@ -33,9 +33,22 @@
 		F4AA5F032EB8F85900545073 /* AdlerScopeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AdlerScopeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		F41B31762EDFC7C00036187F /* Exceptions for "AdlerScope" folder in "AdlerScope" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = F4AA5EE72EB8F85700545073 /* AdlerScope */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		F4AA5EEA2EB8F85700545073 /* AdlerScope */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F41B31762EDFC7C00036187F /* Exceptions for "AdlerScope" folder in "AdlerScope" target */,
+			);
 			path = AdlerScope;
 			sourceTree = "<group>";
 		};

@@ -3,7 +3,7 @@
 //  AdlerScope
 //
 //  Main editor view for DocumentGroup-based document handling
-//  Handles both Markdown editing and PDF viewing
+//  Handles Markdown editing, PDF viewing, and image viewing
 //
 
 import PDFKit
@@ -36,6 +36,9 @@ struct DocumentEditorView: View {
             if document.isPDF {
                 // PDF Viewer (read-only)
                 PDFDocumentView(document: document)
+            } else if document.isImage {
+                // Image Viewer (read-only)
+                ImageDocumentView(document: document)
             } else {
                 // Markdown Editor
                 SplitEditorView(
@@ -78,7 +81,7 @@ struct DocumentEditorView: View {
 
     /// Shows the Photos picker
     private func showPhotosPicker() {
-        guard !document.isPDF else { return }
+        guard !document.isPDF, !document.isImage else { return }
         selectedPhotoItems = []
         showPhotoPicker = true
     }
@@ -176,6 +179,103 @@ struct PDFDocumentView: View {
             }
         }
         #endif
+    }
+}
+
+// MARK: - Image Document View
+
+/// View for displaying image documents (read-only)
+struct ImageDocumentView: View {
+    let document: MarkdownFileDocument
+
+    @State private var zoomScale: CGFloat = 1.0
+    @State private var imageSize: CGSize = .zero
+
+    var body: some View {
+        GeometryReader { geometry in
+            ScrollView([.horizontal, .vertical]) {
+                if let imageData = document.imageData {
+                    #if os(macOS)
+                    if let nsImage = NSImage(data: imageData) {
+                        Image(nsImage: nsImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .scaleEffect(zoomScale)
+                            .frame(
+                                minWidth: geometry.size.width,
+                                minHeight: geometry.size.height
+                            )
+                            .onAppear {
+                                imageSize = nsImage.size
+                            }
+                    } else {
+                        imageErrorView
+                    }
+                    #else
+                    if let uiImage = UIImage(data: imageData) {
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .scaleEffect(zoomScale)
+                            .frame(
+                                minWidth: geometry.size.width,
+                                minHeight: geometry.size.height
+                            )
+                            .onAppear {
+                                imageSize = uiImage.size
+                            }
+                    } else {
+                        imageErrorView
+                    }
+                    #endif
+                } else {
+                    imageErrorView
+                }
+            }
+        }
+        #if os(macOS)
+        .toolbar {
+            ToolbarItemGroup(placement: .automatic) {
+                Button {
+                    withAnimation { zoomScale = max(0.1, zoomScale - 0.25) }
+                } label: {
+                    Image(systemName: "minus.magnifyingglass")
+                }
+                .help("Zoom Out")
+
+                Button {
+                    withAnimation { zoomScale = 1.0 }
+                } label: {
+                    Text("\(Int(zoomScale * 100))%")
+                        .frame(minWidth: 50)
+                }
+                .help("Reset Zoom")
+
+                Button {
+                    withAnimation { zoomScale = min(5.0, zoomScale + 0.25) }
+                } label: {
+                    Image(systemName: "plus.magnifyingglass")
+                }
+                .help("Zoom In")
+
+                Divider()
+
+                if imageSize != .zero {
+                    Text("\(Int(imageSize.width)) × \(Int(imageSize.height))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        #endif
+    }
+
+    private var imageErrorView: some View {
+        ContentUnavailableView(
+            "Unable to Load Image",
+            systemImage: "photo.badge.exclamationmark",
+            description: Text("The image could not be displayed.")
+        )
     }
 }
 

@@ -64,7 +64,7 @@ struct PreviewViewTests {
         // The closure passes settingsViewModel.settings.editor.openInlineLink
         _ = view.body
 
-        #expect(settingsViewModel.settings.editor.openInlineLink == true)
+        #expect(settingsViewModel.settings.editor?.openInlineLink == true)
     }
 
     @Test("Responds to settings changes")
@@ -78,7 +78,7 @@ struct PreviewViewTests {
         _ = PreviewView(document: document)
             .environment(settingsViewModel)
 
-        #expect(settingsViewModel.settings.editor.openInlineLink == false)
+        #expect(settingsViewModel.settings.editor?.openInlineLink == false)
     }
 
     // MARK: - Integration Tests
