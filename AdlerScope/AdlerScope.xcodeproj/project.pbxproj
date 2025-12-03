@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F40AC09E2EE0911E0075124F /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F40AC09D2EE0911E0075124F /* AppIntents.framework */; };
 		F4AA5F192EB8FA4A00545073 /* Markdown in Frameworks */ = {isa = PBXBuildFile; productRef = F4AA5F182EB8FA4A00545073 /* Markdown */; };
 /* End PBXBuildFile section */
 
@@ -28,6 +29,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		F40AC09D2EE0911E0075124F /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks/AppIntents.framework; sourceTree = DEVELOPER_DIR; };
 		F4AA5EE82EB8F85700545073 /* AdlerScope.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AdlerScope.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F4AA5EF92EB8F85900545073 /* AdlerScopeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AdlerScopeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F4AA5F032EB8F85900545073 /* AdlerScopeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AdlerScopeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -69,6 +71,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F40AC09E2EE0911E0075124F /* AppIntents.framework in Frameworks */,
 				F4AA5F192EB8FA4A00545073 /* Markdown in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -90,6 +93,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		F40AC09C2EE0911E0075124F /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				F40AC09D2EE0911E0075124F /* AppIntents.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		F4AA5EDF2EB8F85700545073 = {
 			isa = PBXGroup;
 			children = (
@@ -97,6 +108,7 @@
 				F4AA5EEA2EB8F85700545073 /* AdlerScope */,
 				F4AA5EFC2EB8F85900545073 /* AdlerScopeTests */,
 				F4AA5F062EB8F85900545073 /* AdlerScopeUITests */,
+				F40AC09C2EE0911E0075124F /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
