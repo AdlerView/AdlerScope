@@ -48,12 +48,14 @@ struct MarkdownFileDocument: FileDocument {
 
     /// Check if this document is a PDF
     var isPDF: Bool {
-        contentType == .pdf
+        if case .pdf = contentType { return true }
+        return false
     }
 
     /// Check if this document is an image
     var isImage: Bool {
-        contentType == .image
+        if case .image = contentType { return true }
+        return false
     }
 
     // MARK: - Initialization
