@@ -156,9 +156,9 @@ class ICloudDocumentManager {
             object: query,
             queue: .main
         ) { [weak self] _ in
-            guard let self else { return }
-            Task { @MainActor [weak self] in
-                self?.handleQueryResults()
+            guard let strongSelf = self else { return }
+            Task { @MainActor in
+                strongSelf.handleQueryResults()
             }
         }
 
@@ -167,9 +167,9 @@ class ICloudDocumentManager {
             object: query,
             queue: .main
         ) { [weak self] _ in
-            guard let self else { return }
-            Task { @MainActor [weak self] in
-                self?.handleQueryResults()
+            guard let strongSelf = self else { return }
+            Task { @MainActor in
+                strongSelf.handleQueryResults()
             }
         }
 
