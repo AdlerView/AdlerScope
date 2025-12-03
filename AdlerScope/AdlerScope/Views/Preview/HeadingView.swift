@@ -12,11 +12,18 @@ import Markdown
 struct HeadingView: View {
     let heading: Heading
     let openInlineLinks: Bool
+    let sidecarManager: SidecarManager?
 
     private let styleProvider = HeadingStyleProvider()
 
+    init(heading: Heading, openInlineLinks: Bool, sidecarManager: SidecarManager? = nil) {
+        self.heading = heading
+        self.openInlineLinks = openInlineLinks
+        self.sidecarManager = sidecarManager
+    }
+
     var body: some View {
-        Text(heading.plainText)
+        Text(MarkdownInlineRenderer.render(heading, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager))
             .font(styleProvider.fontForLevel(heading.level))
             .fontWeight(.bold)
             .padding(.vertical, styleProvider.verticalPaddingForLevel(heading.level))

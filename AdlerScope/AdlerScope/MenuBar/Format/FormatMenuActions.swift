@@ -31,6 +31,19 @@ final class FormatMenuActions {
     /// Pending text insertion at cursor (consumed by NSTextViewWrapper)
     var pendingInsertion: String?
 
+    /// Pending image insertion (filename and alt text, consumed by AppKitTextEditor)
+    var pendingImageInsertion: (filename: String, altText: String)?
+
+    // MARK: - Image Insertion
+
+    /// Queues an image for insertion at cursor
+    /// - Parameters:
+    ///   - filename: The image filename in the sidecar directory
+    ///   - altText: Alternative text for accessibility
+    func insertImageMarkdown(filename: String, altText: String) {
+        pendingImageInsertion = (filename, altText)
+    }
+
     // MARK: - Emphasis Formatting
 
     /// Toggles bold formatting - inserts ** markers at cursor

@@ -51,7 +51,8 @@ struct EditorContainerView: View {
                 SplitEditorView(
                     document: $currentFileDocument,
                     parseMarkdownUseCase: parseMarkdownUseCase,
-                    settingsViewModel: settingsViewModel
+                    settingsViewModel: settingsViewModel,
+                    documentURL: currentDocumentURL
                 )
             }
         }

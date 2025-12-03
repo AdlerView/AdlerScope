@@ -65,7 +65,7 @@ struct AdlerScopeApp: App {
     var body: some Scene {
         // DocumentGroup handles: File Open, Save, Autosave, Recent Documents, Undo/Redo
         DocumentGroup(newDocument: MarkdownFileDocument()) { configuration in
-            DocumentEditorView(document: configuration.$document)
+            DocumentEditorView(document: configuration.$document, fileURL: configuration.fileURL)
                 .environment(\.dependencyContainer, dependencyContainer)
                 .environment(settingsViewModel)
         }

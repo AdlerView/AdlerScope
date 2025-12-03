@@ -1,5 +1,9 @@
 import SwiftUI
 import Markdown
+import UniformTypeIdentifiers
+#if os(macOS)
+import AppKit
+#endif
 
 /// Split editor view with multiple view modes (Editor Only | Preview Only | Split)
 /// Uses Clean Architecture with dependency injection
@@ -8,12 +12,25 @@ struct SplitEditorView: View {
     @Environment(SettingsViewModel.self) private var settingsViewModel
     @State private var viewModel: SplitEditorViewModel
 
+    // MARK: - Image Handling
+
+    /// Document URL for sidecar management (optional, enables image insertion when set)
+    let documentURL: URL?
+
+    /// Manages the sidecar directory for images
+    @State private var sidecarManager = SidecarManager()
+
+    /// Handles image drag-and-drop operations
+    @State private var imageDropHandler: ImageDropHandler?
+
     init(
         document: Binding<MarkdownFileDocument>,
         parseMarkdownUseCase: ParseMarkdownUseCase,
-        settingsViewModel: SettingsViewModel
+        settingsViewModel: SettingsViewModel,
+        documentURL: URL? = nil
     ) {
         self._document = document
+        self.documentURL = documentURL
 
         // Create ViewModel with injected dependencies
         self._viewModel = State(wrappedValue: SplitEditorViewModel(
@@ -31,7 +48,8 @@ struct SplitEditorView: View {
                 AppKitTextEditor(
                     text: $document.content,
                     formatActions: viewModel.formatActions,
-                    editActions: viewModel.editActions
+                    editActions: viewModel.editActions,
+                    imageDropHandler: imageDropHandler
                 )
                 .applyFormatCommands(formatActions: viewModel.formatActions, onSync: syncText)
                 .applyEditCommands(editActions: viewModel.editActions, onSync: syncText)
@@ -39,19 +57,20 @@ struct SplitEditorView: View {
 
             case .previewOnly:
                 // Preview Only Mode
-                PreviewView(document: viewModel.renderedDocument)
+                PreviewView(document: viewModel.renderedDocument, sidecarManager: sidecarManager)
 
             case .split:
                 // Split View Mode
                 HSplitView {
                     if viewModel.swapPanes {
                         // Swapped: Preview on left, Editor on right
-                        PreviewView(document: viewModel.renderedDocument)
+                        PreviewView(document: viewModel.renderedDocument, sidecarManager: sidecarManager)
 
                         AppKitTextEditor(
                             text: $document.content,
                             formatActions: viewModel.formatActions,
-                            editActions: viewModel.editActions
+                            editActions: viewModel.editActions,
+                            imageDropHandler: imageDropHandler
                         )
                         .applyFormatCommands(formatActions: viewModel.formatActions, onSync: syncText)
                         .applyEditCommands(editActions: viewModel.editActions, onSync: syncText)
@@ -61,13 +80,14 @@ struct SplitEditorView: View {
                         AppKitTextEditor(
                             text: $document.content,
                             formatActions: viewModel.formatActions,
-                            editActions: viewModel.editActions
+                            editActions: viewModel.editActions,
+                            imageDropHandler: imageDropHandler
                         )
                         .applyFormatCommands(formatActions: viewModel.formatActions, onSync: syncText)
                         .applyEditCommands(editActions: viewModel.editActions, onSync: syncText)
                         .focusedSceneValue(\.editorText, $document.content)
 
-                        PreviewView(document: viewModel.renderedDocument)
+                        PreviewView(document: viewModel.renderedDocument, sidecarManager: sidecarManager)
                     }
                 }
             }
@@ -83,7 +103,7 @@ struct SplitEditorView: View {
 
                 Divider()
 
-                PreviewView(document: viewModel.renderedDocument)
+                PreviewView(document: viewModel.renderedDocument, sidecarManager: sidecarManager)
             }
             #endif
         }
@@ -94,6 +114,9 @@ struct SplitEditorView: View {
         .focusedSceneValue(\.zoomIn, viewModel.zoomIn)
         .focusedSceneValue(\.zoomOut, viewModel.zoomOut)
         .focusedSceneValue(\.resetZoom, viewModel.resetZoom)
+        #if os(macOS)
+        .focusedSceneValue(\.insertImage, presentImagePicker)
+        #endif
         .onChange(of: document.content) { oldValue, newValue in
             viewModel.debounceRender(content: newValue)
         }
@@ -101,8 +124,15 @@ struct SplitEditorView: View {
             viewModel.forceRender(content: document.content)
         }
         .onAppear {
+            configureImageHandling()
             Task {
                 await viewModel.render(content: document.content)
+            }
+        }
+        .onChange(of: documentURL) { _, newURL in
+            if let url = newURL {
+                sidecarManager.configure(for: url)
+                createImageDropHandler()
             }
         }
     }
@@ -115,6 +145,54 @@ struct SplitEditorView: View {
             document.content = viewModel.formatActions.text
         }
     }
+
+    // MARK: - Image Handling Helpers
+
+    /// Configures sidecar manager and image drop handler
+    private func configureImageHandling() {
+        print("[SplitEditorView] configureImageHandling called, documentURL: \(documentURL?.path ?? "nil")")
+        if let url = documentURL {
+            sidecarManager.configure(for: url)
+            createImageDropHandler()
+            print("[SplitEditorView] SidecarManager configured, sidecarURL: \(sidecarManager.sidecarURL?.path ?? "nil")")
+        } else {
+            print("[SplitEditorView] No documentURL, skipping sidecar configuration")
+        }
+    }
+
+    /// Creates the image drop handler with current dependencies
+    private func createImageDropHandler() {
+        #if os(macOS)
+        imageDropHandler = ImageDropHandler(
+            sidecarManager: sidecarManager,
+            formatActions: viewModel.formatActions,
+            undoManager: nil
+        )
+        #endif
+    }
+
+    #if os(macOS)
+    /// Presents the image picker panel
+    private func presentImagePicker() {
+        guard sidecarManager.sidecarURL != nil else {
+            // Document must be saved first
+            return
+        }
+
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.image]
+        panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = false
+        panel.canCreateDirectories = false
+        panel.message = "Select images to insert"
+        panel.prompt = "Insert"
+
+        panel.begin { response in
+            guard response == .OK else { return }
+            imageDropHandler?.handleDrop(of: panel.urls)
+        }
+    }
+    #endif
 }
 
 // MARK: - Preview

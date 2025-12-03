@@ -12,6 +12,13 @@ import Markdown
 struct TableView: View {
     let table: Markdown.Table
     let openInlineLinks: Bool
+    let sidecarManager: SidecarManager?
+
+    init(table: Markdown.Table, openInlineLinks: Bool, sidecarManager: SidecarManager? = nil) {
+        self.table = table
+        self.openInlineLinks = openInlineLinks
+        self.sidecarManager = sidecarManager
+    }
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: true) {
@@ -26,7 +33,8 @@ struct TableView: View {
                                         cell: cell,
                                         isHeader: true,
                                         alignment: columnAlignment(at: cellIndex),
-                                        openInlineLinks: openInlineLinks
+                                        openInlineLinks: openInlineLinks,
+                                        sidecarManager: sidecarManager
                                     )
                                 }
                             }
@@ -47,7 +55,8 @@ struct TableView: View {
                                     cell: cell,
                                     isHeader: false,
                                     alignment: columnAlignment(at: cellIndex),
-                                    openInlineLinks: openInlineLinks
+                                    openInlineLinks: openInlineLinks,
+                                    sidecarManager: sidecarManager
                                 )
                             }
                         }
@@ -91,11 +100,12 @@ private struct TableCellView: View {
     let isHeader: Bool
     let alignment: Alignment
     let openInlineLinks: Bool
+    let sidecarManager: SidecarManager?
 
     var body: some View {
         VStack(alignment: horizontalAlignment, spacing: 4) {
             ForEach(Array(cell.children.enumerated()), id: \.offset) { _, child in
-                InlineContentView(markup: child, openInlineLinks: openInlineLinks)
+                InlineContentView(markup: child, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager)
             }
         }
         .frame(minWidth: 80, alignment: alignment) // Minimum column width
@@ -126,6 +136,7 @@ private struct TableCellView: View {
 private struct InlineContentView: View {
     let markup: Markup
     let openInlineLinks: Bool
+    let sidecarManager: SidecarManager?
 
     var body: some View {
         Group {
@@ -144,6 +155,8 @@ private struct InlineContentView: View {
                     .cornerRadius(3)
             } else if let link = markup as? Markdown.Link {
                 renderLink(link)
+            } else if let image = markup as? Markdown.Image {
+                renderImage(image)
             } else {
                 // Fallback for other inline elements
                 SwiftUI.Text(markup.format())
@@ -155,7 +168,7 @@ private struct InlineContentView: View {
     private func renderEmphasis(_ emphasis: Emphasis) -> some View {
         HStack(spacing: 0) {
             ForEach(Array(emphasis.children.enumerated()), id: \.offset) { _, child in
-                InlineContentView(markup: child, openInlineLinks: openInlineLinks)
+                InlineContentView(markup: child, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager)
             }
         }
         .italic()
@@ -165,7 +178,7 @@ private struct InlineContentView: View {
     private func renderStrong(_ strong: Strong) -> some View {
         HStack(spacing: 0) {
             ForEach(Array(strong.children.enumerated()), id: \.offset) { _, child in
-                InlineContentView(markup: child, openInlineLinks: openInlineLinks)
+                InlineContentView(markup: child, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager)
             }
         }
         .bold()
@@ -177,18 +190,30 @@ private struct InlineContentView: View {
             SwiftUI.Link(destination: url) {
                 HStack(spacing: 2) {
                     ForEach(Array(link.children.enumerated()), id: \.offset) { _, child in
-                        InlineContentView(markup: child, openInlineLinks: openInlineLinks)
+                        InlineContentView(markup: child, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager)
                     }
                 }
             }
         } else {
             HStack(spacing: 2) {
                 ForEach(Array(link.children.enumerated()), id: \.offset) { _, child in
-                    InlineContentView(markup: child, openInlineLinks: openInlineLinks)
+                    InlineContentView(markup: child, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager)
                 }
             }
             .foregroundStyle(.blue)
         }
+    }
+
+    @ViewBuilder
+    private func renderImage(_ image: Markdown.Image) -> some View {
+        // For inline images in tables, show a placeholder
+        let altText = image.plainText
+        let source = image.source ?? ""
+        let displayText = altText.isEmpty ? "[\(source)]" : "[\(altText)]"
+
+        SwiftUI.Text("🖼 " + displayText)
+            .foregroundStyle(Color.Markdown.link)
+            .italic()
     }
 }
 

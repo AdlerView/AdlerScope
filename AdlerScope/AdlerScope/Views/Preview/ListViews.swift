@@ -12,6 +12,13 @@ import Markdown
 struct UnorderedListView: View {
     let list: UnorderedList
     let openInlineLinks: Bool
+    let sidecarManager: SidecarManager?
+
+    init(list: UnorderedList, openInlineLinks: Bool, sidecarManager: SidecarManager? = nil) {
+        self.list = list
+        self.openInlineLinks = openInlineLinks
+        self.sidecarManager = sidecarManager
+    }
 
     var body: some View {
         Grid(alignment: .topLeading, horizontalSpacing: 8, verticalSpacing: 4) {
@@ -23,7 +30,7 @@ struct UnorderedListView: View {
 
                     VStack(alignment: .leading, spacing: 4) {
                         ForEach(Array(item.children.enumerated()), id: \.offset) { _, child in
-                            MarkdownBlockView(markup: child, openInlineLinks: openInlineLinks)
+                            MarkdownBlockView(markup: child, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -38,6 +45,13 @@ struct UnorderedListView: View {
 struct OrderedListView: View {
     let list: OrderedList
     let openInlineLinks: Bool
+    let sidecarManager: SidecarManager?
+
+    init(list: OrderedList, openInlineLinks: Bool, sidecarManager: SidecarManager? = nil) {
+        self.list = list
+        self.openInlineLinks = openInlineLinks
+        self.sidecarManager = sidecarManager
+    }
 
     var body: some View {
         Grid(alignment: .topLeading, horizontalSpacing: 8, verticalSpacing: 4) {
@@ -49,7 +63,7 @@ struct OrderedListView: View {
 
                     VStack(alignment: .leading, spacing: 4) {
                         ForEach(Array(item.children.enumerated()), id: \.offset) { _, child in
-                            MarkdownBlockView(markup: child, openInlineLinks: openInlineLinks)
+                            MarkdownBlockView(markup: child, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)

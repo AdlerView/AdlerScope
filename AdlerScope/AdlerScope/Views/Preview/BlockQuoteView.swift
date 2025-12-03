@@ -12,6 +12,13 @@ import Markdown
 struct BlockQuoteView: View {
     let blockQuote: BlockQuote
     let openInlineLinks: Bool
+    let sidecarManager: SidecarManager?
+
+    init(blockQuote: BlockQuote, openInlineLinks: Bool, sidecarManager: SidecarManager? = nil) {
+        self.blockQuote = blockQuote
+        self.openInlineLinks = openInlineLinks
+        self.sidecarManager = sidecarManager
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -21,7 +28,7 @@ struct BlockQuoteView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(Array(blockQuote.children.enumerated()), id: \.offset) { _, child in
-                    MarkdownBlockView(markup: child, openInlineLinks: openInlineLinks)
+                    MarkdownBlockView(markup: child, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

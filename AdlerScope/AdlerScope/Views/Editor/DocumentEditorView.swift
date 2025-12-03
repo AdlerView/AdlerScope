@@ -17,6 +17,9 @@ struct DocumentEditorView: View {
 
     @Binding var document: MarkdownFileDocument
 
+    /// Document URL from DocumentGroup configuration (for sidecar image support)
+    let fileURL: URL?
+
     // MARK: - Environment
 
     @Environment(\.dependencyContainer) private var dependencyContainer
@@ -28,6 +31,13 @@ struct DocumentEditorView: View {
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var isProcessingPhotos = false
     @State private var photoImportError: String?
+
+    // MARK: - Initialization
+
+    init(document: Binding<MarkdownFileDocument>, fileURL: URL? = nil) {
+        self._document = document
+        self.fileURL = fileURL
+    }
 
     // MARK: - Body
 
@@ -44,7 +54,8 @@ struct DocumentEditorView: View {
                 SplitEditorView(
                     document: $document,
                     parseMarkdownUseCase: dependencyContainer.parseMarkdownUseCase,
-                    settingsViewModel: settingsViewModel
+                    settingsViewModel: settingsViewModel,
+                    documentURL: fileURL
                 )
             }
         }

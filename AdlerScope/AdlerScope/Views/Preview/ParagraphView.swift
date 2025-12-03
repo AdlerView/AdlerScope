@@ -12,9 +12,16 @@ import Markdown
 struct ParagraphView: View {
     let paragraph: Paragraph
     let openInlineLinks: Bool
+    let sidecarManager: SidecarManager?
+
+    init(paragraph: Paragraph, openInlineLinks: Bool, sidecarManager: SidecarManager? = nil) {
+        self.paragraph = paragraph
+        self.openInlineLinks = openInlineLinks
+        self.sidecarManager = sidecarManager
+    }
 
     var body: some View {
-        Text(MarkdownInlineRenderer.render(paragraph, openInlineLinks: openInlineLinks))
+        Text(MarkdownInlineRenderer.render(paragraph, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager))
             .fixedSize(horizontal: false, vertical: true)
             .textSelection(.enabled)
     }
@@ -29,23 +36,26 @@ struct MarkdownInlineRenderer {
     /// - Parameters:
     ///   - markup: The markup element to render (typically Paragraph or inline container)
     ///   - openInlineLinks: Whether links should be clickable
+    ///   - sidecarManager: Optional sidecar manager for resolving image paths
     /// - Returns: Styled AttributedString with inline formatting
-    static func render(_ markup: Markup, openInlineLinks: Bool) -> AttributedString {
+    static func render(_ markup: Markup, openInlineLinks: Bool, sidecarManager: SidecarManager? = nil) -> AttributedString {
         var result = AttributedString()
 
         for child in markup.children {
             if let text = child as? Markdown.Text {
                 result += AttributedString(text.string)
             } else if let strong = child as? Strong {
-                result += renderStrong(strong, openInlineLinks: openInlineLinks)
+                result += renderStrong(strong, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager)
             } else if let emphasis = child as? Emphasis {
-                result += renderEmphasis(emphasis, openInlineLinks: openInlineLinks)
+                result += renderEmphasis(emphasis, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager)
             } else if let code = child as? InlineCode {
                 result += renderInlineCode(code)
             } else if let link = child as? Markdown.Link {
                 result += renderLink(link, openInlineLinks: openInlineLinks)
             } else if let strikethrough = child as? Strikethrough {
-                result += renderStrikethrough(strikethrough, openInlineLinks: openInlineLinks)
+                result += renderStrikethrough(strikethrough, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager)
+            } else if let image = child as? Markdown.Image {
+                result += renderImage(image, sidecarManager: sidecarManager)
             } else if child is SoftBreak {
                 // CommonMark spec: Soft breaks (single newlines) render as spaces
                 result += AttributedString(" ")
@@ -60,14 +70,14 @@ struct MarkdownInlineRenderer {
 
     // MARK: - Private Renderers
 
-    private static func renderStrong(_ strong: Strong, openInlineLinks: Bool) -> AttributedString {
-        var bold = render(strong, openInlineLinks: openInlineLinks)
+    private static func renderStrong(_ strong: Strong, openInlineLinks: Bool, sidecarManager: SidecarManager?) -> AttributedString {
+        var bold = render(strong, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager)
         bold.font = .body.bold()
         return bold
     }
 
-    private static func renderEmphasis(_ emphasis: Emphasis, openInlineLinks: Bool) -> AttributedString {
-        var italic = render(emphasis, openInlineLinks: openInlineLinks)
+    private static func renderEmphasis(_ emphasis: Emphasis, openInlineLinks: Bool, sidecarManager: SidecarManager?) -> AttributedString {
+        var italic = render(emphasis, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager)
         italic.font = .body.italic()
         return italic
     }
@@ -93,11 +103,27 @@ struct MarkdownInlineRenderer {
         return linkText
     }
 
-    private static func renderStrikethrough(_ strikethrough: Strikethrough, openInlineLinks: Bool) -> AttributedString {
-        var struck = render(strikethrough, openInlineLinks: openInlineLinks)
+    private static func renderStrikethrough(_ strikethrough: Strikethrough, openInlineLinks: Bool, sidecarManager: SidecarManager?) -> AttributedString {
+        var struck = render(strikethrough, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager)
         struck.strikethroughStyle = .single
         struck.foregroundColor = Color.secondary
         return struck
+    }
+
+    private static func renderImage(_ image: Markdown.Image, sidecarManager: SidecarManager?) -> AttributedString {
+        // For inline images (mixed with text), we show a placeholder indicator
+        // Block-level images are rendered by ImagePreviewView instead
+        let altText = image.plainText
+        let source = image.source ?? ""
+
+        // Create a styled placeholder for inline images
+        let displayText = altText.isEmpty ? "[\(source)]" : "[\(altText)]"
+        var imageIndicator = AttributedString("🖼 " + displayText)
+        imageIndicator.foregroundColor = Color.Markdown.link
+        imageIndicator.backgroundColor = Color.Markdown.inlineCodeBackground
+        imageIndicator.font = .body.italic()
+
+        return imageIndicator
     }
 }
 

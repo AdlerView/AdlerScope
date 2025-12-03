@@ -12,7 +12,13 @@ import Markdown
 /// Native SwiftUI Markdown Preview using swift-markdown AST
 struct PreviewView: View {
     let document: Document?
+    let sidecarManager: SidecarManager?
     @Environment(SettingsViewModel.self) private var settingsViewModel
+
+    init(document: Document?, sidecarManager: SidecarManager? = nil) {
+        self.document = document
+        self.sidecarManager = sidecarManager
+    }
 
     var body: some View {
         ScrollView {
@@ -21,7 +27,8 @@ struct PreviewView: View {
                     ForEach(Array(doc.children.enumerated()), id: \.offset) { index, child in
                         MarkdownBlockView(
                             markup: child,
-                            openInlineLinks: settingsViewModel.settings.editor?.openInlineLink ?? false
+                            openInlineLinks: settingsViewModel.settings.editor?.openInlineLink ?? false,
+                            sidecarManager: sidecarManager
                         )
                     }
                 }
@@ -55,23 +62,39 @@ struct PreviewView: View {
 struct MarkdownBlockView: View {
     let markup: Markup
     let openInlineLinks: Bool
+    let sidecarManager: SidecarManager?
+
+    init(markup: Markup, openInlineLinks: Bool, sidecarManager: SidecarManager? = nil) {
+        self.markup = markup
+        self.openInlineLinks = openInlineLinks
+        self.sidecarManager = sidecarManager
+    }
 
     var body: some View {
         Group {
             if let heading = markup as? Heading {
-                HeadingView(heading: heading, openInlineLinks: openInlineLinks)
+                HeadingView(heading: heading, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager)
             } else if let paragraph = markup as? Paragraph {
-                ParagraphView(paragraph: paragraph, openInlineLinks: openInlineLinks)
+                // Check if paragraph contains only an image
+                if let image = extractSingleImage(from: paragraph) {
+                    #if os(macOS)
+                    ImagePreviewView(image: image, sidecarManager: sidecarManager)
+                    #else
+                    ParagraphView(paragraph: paragraph, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager)
+                    #endif
+                } else {
+                    ParagraphView(paragraph: paragraph, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager)
+                }
             } else if let codeBlock = markup as? CodeBlock {
                 CodeBlockView(codeBlock: codeBlock)
             } else if let table = markup as? Markdown.Table {
-                TableView(table: table, openInlineLinks: openInlineLinks)
+                TableView(table: table, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager)
             } else if let list = markup as? UnorderedList {
-                UnorderedListView(list: list, openInlineLinks: openInlineLinks)
+                UnorderedListView(list: list, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager)
             } else if let list = markup as? OrderedList {
-                OrderedListView(list: list, openInlineLinks: openInlineLinks)
+                OrderedListView(list: list, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager)
             } else if let blockQuote = markup as? BlockQuote {
-                BlockQuoteView(blockQuote: blockQuote, openInlineLinks: openInlineLinks)
+                BlockQuoteView(blockQuote: blockQuote, openInlineLinks: openInlineLinks, sidecarManager: sidecarManager)
             } else if markup is ThematicBreak {
                 Divider()
                     .padding(.vertical, 8)
@@ -87,6 +110,30 @@ struct MarkdownBlockView: View {
                     .cornerRadius(4)
             }
         }
+    }
+
+    /// Extracts a single image from a paragraph if it's the only content
+    /// - Parameter paragraph: The paragraph to check
+    /// - Returns: The Image if the paragraph contains only an image, nil otherwise
+    private func extractSingleImage(from paragraph: Paragraph) -> Markdown.Image? {
+        let children = Array(paragraph.children)
+
+        // Single image
+        if children.count == 1, let image = children.first as? Markdown.Image {
+            return image
+        }
+
+        // Image with soft break (newline before/after)
+        if children.count == 2 {
+            if let image = children.first as? Markdown.Image, children.last is SoftBreak {
+                return image
+            }
+            if children.first is SoftBreak, let image = children.last as? Markdown.Image {
+                return image
+            }
+        }
+
+        return nil
     }
 }
 
