@@ -95,8 +95,6 @@
 	</dict>
 	<key>UIApplicationSupportsMultipleScenes</key>
 	<true/>
-	<key>NSSiriUsageDescription</key>
-	<string>AdlerScope uses Siri to help you open and manage your markdown documents with voice commands.</string>
 	<key>UTImportedTypeDeclarations</key>
 	<array>
 		<dict>

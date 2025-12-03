@@ -29,10 +29,21 @@ final class SidecarManager {
     /// URL of the parent document
     private(set) var documentURL: URL?
 
+    /// Parent directory URL (for security-scoped access)
+    private var parentDirectoryURL: URL?
+
+    /// Whether security-scoped access is active
+    private var isAccessingSecurityScope = false
+
     /// Whether the sidecar directory exists
     var sidecarExists: Bool {
         guard let url = sidecarURL else { return false }
         return FileManager.default.fileExists(atPath: url.path)
+    }
+
+    deinit {
+        // Note: deinit won't be called on MainActor, but we track the state
+        // The actual cleanup happens in reset()
     }
 
     // MARK: - Configuration
@@ -40,13 +51,18 @@ final class SidecarManager {
     /// Configures the sidecar manager for a document
     /// - Parameter documentURL: The URL of the markdown document
     func configure(for documentURL: URL) {
+        // Stop any previous security-scoped access
+        stopSecurityScopedAccess()
+
         self.documentURL = documentURL
 
         let baseName = documentURL.deletingPathExtension().lastPathComponent
         let parentDir = documentURL.deletingLastPathComponent()
+        self.parentDirectoryURL = parentDir
 
-        print("[SidecarManager] Configuring for document: \(documentURL.path)")
-        print("[SidecarManager] Base name: \(baseName), parent: \(parentDir.path)")
+        // Start security-scoped access on the parent directory
+        // This allows reading sibling files/directories like .assets/
+        startSecurityScopedAccess()
 
         // Try naming conventions in order of preference
         let candidates = [
@@ -58,12 +74,9 @@ final class SidecarManager {
         // Check if any existing sidecar directory exists
         for name in candidates {
             let url = parentDir.appendingPathComponent(name, isDirectory: true)
-            let exists = FileManager.default.fileExists(atPath: url.path)
-            print("[SidecarManager] Checking \(url.path): exists=\(exists)")
-            if exists {
+            if FileManager.default.fileExists(atPath: url.path) {
                 sidecarURL = url
                 loadManifest()
-                print("[SidecarManager] Found sidecar at: \(url.path), manifest: \(imageManifest.keys.joined(separator: ", "))")
                 return
             }
         }
@@ -72,14 +85,41 @@ final class SidecarManager {
         // Will be created on first image insert
         sidecarURL = parentDir.appendingPathComponent("\(baseName).assets", isDirectory: true)
         imageManifest = [:]
-        print("[SidecarManager] No sidecar found, will use: \(sidecarURL?.path ?? "nil")")
     }
 
     /// Resets the manager state
     func reset() {
+        stopSecurityScopedAccess()
         sidecarURL = nil
         documentURL = nil
+        parentDirectoryURL = nil
         imageManifest = [:]
+    }
+
+    // MARK: - Security-Scoped Access
+
+    /// Starts security-scoped access on the parent directory
+    private func startSecurityScopedAccess() {
+        // Try the document URL first (it has security scope from DocumentGroup)
+        if let docURL = documentURL {
+            _ = docURL.startAccessingSecurityScopedResource()
+        }
+
+        // Also try the parent directory
+        if let parentURL = parentDirectoryURL {
+            isAccessingSecurityScope = parentURL.startAccessingSecurityScopedResource()
+        }
+    }
+
+    /// Stops security-scoped access
+    private func stopSecurityScopedAccess() {
+        if isAccessingSecurityScope, let parentURL = parentDirectoryURL {
+            parentURL.stopAccessingSecurityScopedResource()
+            isAccessingSecurityScope = false
+        }
+        if let docURL = documentURL {
+            docURL.stopAccessingSecurityScopedResource()
+        }
     }
 
     // MARK: - Manifest Management

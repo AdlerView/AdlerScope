@@ -150,13 +150,9 @@ struct SplitEditorView: View {
 
     /// Configures sidecar manager and image drop handler
     private func configureImageHandling() {
-        print("[SplitEditorView] configureImageHandling called, documentURL: \(documentURL?.path ?? "nil")")
         if let url = documentURL {
             sidecarManager.configure(for: url)
             createImageDropHandler()
-            print("[SplitEditorView] SidecarManager configured, sidecarURL: \(sidecarManager.sidecarURL?.path ?? "nil")")
-        } else {
-            print("[SplitEditorView] No documentURL, skipping sidecar configuration")
         }
     }
 

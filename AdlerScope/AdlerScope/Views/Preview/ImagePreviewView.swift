@@ -126,13 +126,7 @@ struct ImagePreviewView: View {
     // MARK: - Image Loading
 
     private func loadImage() {
-        print("[ImagePreviewView] Loading image, source: \(image.source ?? "nil")")
-        print("[ImagePreviewView] SidecarManager: \(sidecarManager != nil ? "present" : "nil")")
-        print("[ImagePreviewView] SidecarURL: \(sidecarManager?.sidecarURL?.path ?? "nil")")
-        print("[ImagePreviewView] DocumentURL: \(sidecarManager?.documentURL?.path ?? "nil")")
-
         guard let source = image.source, !source.isEmpty else {
-            print("[ImagePreviewView] No source, setting missing")
             loadState = .missing
             return
         }
@@ -140,7 +134,6 @@ struct ImagePreviewView: View {
         // Check if this is a URL or a local filename
         if source.hasPrefix("http://") || source.hasPrefix("https://") {
             // Remote URL - for now show as missing (could add async loading later)
-            print("[ImagePreviewView] Remote URL not supported")
             loadState = .missing
             return
         }
@@ -148,7 +141,6 @@ struct ImagePreviewView: View {
         // Strategy 1: Try to resolve via SidecarManager manifest
         if let manager = sidecarManager,
            let url = manager.resolveImage(filename: source) {
-            print("[ImagePreviewView] Strategy 1: Found in manifest: \(url.path)")
             loadFromURL(url)
             return
         }
@@ -157,9 +149,7 @@ struct ImagePreviewView: View {
         if let manager = sidecarManager,
            let sidecarURL = manager.sidecarURL {
             let imageURL = sidecarURL.appendingPathComponent(source)
-            let exists = FileManager.default.fileExists(atPath: imageURL.path)
-            print("[ImagePreviewView] Strategy 2: Direct path \(imageURL.path), exists: \(exists)")
-            if exists {
+            if FileManager.default.fileExists(atPath: imageURL.path) {
                 loadFromURL(imageURL)
                 return
             }
@@ -170,16 +160,13 @@ struct ImagePreviewView: View {
            let documentURL = manager.documentURL {
             let sidecarURL = SidecarManager.sidecarURL(for: documentURL)
             let imageURL = sidecarURL.appendingPathComponent(source)
-            let exists = FileManager.default.fileExists(atPath: imageURL.path)
-            print("[ImagePreviewView] Strategy 3: Computed path \(imageURL.path), exists: \(exists)")
-            if exists {
+            if FileManager.default.fileExists(atPath: imageURL.path) {
                 loadFromURL(imageURL)
                 return
             }
         }
 
         // No sidecar manager or image not found
-        print("[ImagePreviewView] Image not found, setting missing")
         loadState = .missing
     }
 
@@ -189,10 +176,16 @@ struct ImagePreviewView: View {
             return
         }
 
-        if let nsImage = NSImage(contentsOf: url), nsImage.isValid {
-            loadedImage = nsImage
-            loadState = .loaded
-        } else {
+        // Try reading file data
+        do {
+            let data = try Data(contentsOf: url)
+            if let nsImage = NSImage(data: data), nsImage.isValid {
+                loadedImage = nsImage
+                loadState = .loaded
+            } else {
+                loadState = .corrupt
+            }
+        } catch {
             loadState = .corrupt
         }
     }
