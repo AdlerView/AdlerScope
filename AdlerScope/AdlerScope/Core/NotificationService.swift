@@ -444,13 +444,55 @@ extension NotificationService: UNUserNotificationCenterDelegate {
     private func handleViewUpdate(userInfo: [AnyHashable: Any]) async {
         let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AdlerScope", category: "Notifications")
         logger.info("View update action")
-        // Implement content update viewing logic
+
+        // Navigate to the updated document if document ID is provided
+        if let documentIDString = userInfo["documentID"] as? String,
+           let documentID = UUID(uuidString: documentIDString) {
+            // Use NavigationService for in-app navigation
+            await MainActor.run {
+                NavigationService.shared.requestOpenDocument(id: documentID)
+            }
+            return
+        }
+
+        // Fallback: open document URL externally if provided
+        if let urlString = userInfo["documentURL"] as? String,
+           let url = URL(string: urlString) {
+            await MainActor.run {
+                #if canImport(UIKit)
+                UIApplication.shared.open(url)
+                #elseif canImport(AppKit)
+                NSWorkspace.shared.open(url)
+                #endif
+            }
+        }
     }
 
     private func handleOpenReminder(userInfo: [AnyHashable: Any]) async {
         let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AdlerScope", category: "Notifications")
         logger.info("Open reminder action")
-        // Implement reminder opening logic
+
+        // Navigate to the associated document if one is provided
+        if let documentIDString = userInfo["documentID"] as? String,
+           let documentID = UUID(uuidString: documentIDString) {
+            // Use NavigationService for in-app navigation
+            await MainActor.run {
+                NavigationService.shared.requestOpenDocument(id: documentID)
+            }
+            return
+        }
+
+        // Fallback: open document URL externally if provided
+        if let urlString = userInfo["documentURL"] as? String,
+           let url = URL(string: urlString) {
+            await MainActor.run {
+                #if canImport(UIKit)
+                UIApplication.shared.open(url)
+                #elseif canImport(AppKit)
+                NSWorkspace.shared.open(url)
+                #endif
+            }
+        }
     }
 
     private func handleSnoozeReminder(userInfo: [AnyHashable: Any]) async {
