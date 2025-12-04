@@ -87,7 +87,9 @@ class CloudKitService {
     /// Checks the current iCloud account status
     /// - Returns: The current account status
     func checkAccountStatus() async -> CloudAccountStatus {
+        #if DEBUG
         logger.debug("Checking iCloud account status...")
+        #endif
 
         do {
             let status = try await container.accountStatus()
@@ -126,7 +128,9 @@ class CloudKitService {
     /// Fetches the current user's record ID
     /// - Returns: The user's record ID, or nil if not available
     func fetchUserRecordID() async -> CKRecord.ID? {
+        #if DEBUG
         logger.debug("Fetching user record ID...")
+        #endif
 
         do {
             let recordID = try await container.userRecordID()
@@ -148,7 +152,9 @@ class CloudKitService {
     /// - Returns: The user's identity, or nil if not a participant
     func fetchUserIdentity(from share: CKShare) -> CKUserIdentity? {
         guard let participant = share.currentUserParticipant else {
+            #if DEBUG
             logger.debug("Current user is not a participant in this share")
+            #endif
             return nil
         }
         let identity = participant.userIdentity
@@ -163,7 +169,9 @@ class CloudKitService {
     /// - Parameter userRecordIDs: The record IDs to look up
     /// - Returns: A dictionary mapping record IDs to participant results
     func fetchShareParticipants(for userRecordIDs: [CKRecord.ID]) async -> [CKRecord.ID: Result<CKShare.Participant, Error>] {
+        #if DEBUG
         logger.debug("Fetching share participants for \(userRecordIDs.count) user record IDs...")
+        #endif
 
         do {
             let results = try await container.shareParticipants(forUserRecordIDs: userRecordIDs)
@@ -180,9 +188,11 @@ class CloudKitService {
     /// - Parameter emailAddresses: The email addresses to look up
     /// - Returns: A dictionary mapping email addresses to participant results
     func fetchShareParticipants(forEmailAddresses emailAddresses: [String]) async -> [String: Result<CKShare.Participant, Error>] {
+        #if DEBUG
         logger.debug("Fetching share participants for \(emailAddresses.count) email addresses...")
+        #endif
 
-        do {
+        do{
             let results = try await container.shareParticipants(forEmailAddresses: emailAddresses)
             logger.info("Fetched \(results.count) share participant results")
             return results
@@ -197,7 +207,9 @@ class CloudKitService {
     /// - Parameter phoneNumbers: The phone numbers to look up
     /// - Returns: A dictionary mapping phone numbers to participant results
     func fetchShareParticipants(forPhoneNumbers phoneNumbers: [String]) async -> [String: Result<CKShare.Participant, Error>] {
+        #if DEBUG
         logger.debug("Fetching share participants for \(phoneNumbers.count) phone numbers...")
+        #endif
 
         do {
             let results = try await container.shareParticipants(forPhoneNumbers: phoneNumbers)
@@ -223,12 +235,16 @@ class CloudKitService {
                 _ = await self?.checkAccountStatus()
             }
         }
+        #if DEBUG
         logger.debug("Started observing iCloud account changes")
+        #endif
     }
 
     /// Stops observing account status changes
     func stopObservingAccountChanges() {
         NotificationCenter.default.removeObserver(self, name: .CKAccountChanged, object: nil)
+        #if DEBUG
         logger.debug("Stopped observing iCloud account changes")
+        #endif
     }
 }

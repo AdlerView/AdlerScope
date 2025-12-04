@@ -10,10 +10,13 @@
 import AppKit
 import Foundation
 import UniformTypeIdentifiers
+import OSLog
 
 /// Handles image drop and paste operations
 @MainActor
 final class ImageDropHandler {
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AdlerScope", category: "ImageDropHandler")
+
     // MARK: - Dependencies
 
     private let sidecarManager: SidecarManager
@@ -80,7 +83,7 @@ final class ImageDropHandler {
                 formatActions.insertImageMarkdown(filename: filename, altText: altText)
                 successCount += 1
             } catch {
-                print("Failed to import image \(imageURL.lastPathComponent): \(error)")
+                logger.error("Failed to import image \(imageURL.lastPathComponent): \(error, privacy: .public)")
             }
         }
 
@@ -161,7 +164,7 @@ final class ImageDropHandler {
             undoManager?.endUndoGrouping()
             return true
         } catch {
-            print("Failed to paste image: \(error)")
+            logger.error("Failed to paste image: \(error, privacy: .public)")
             undoManager?.endUndoGrouping()
             return false
         }

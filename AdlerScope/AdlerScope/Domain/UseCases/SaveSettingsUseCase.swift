@@ -26,7 +26,9 @@ actor SaveSettingsUseCase {
         // Save to storage
         try await settingsRepository.save(validatedSettings)
 
+        #if DEBUG
         await os_log("Settings saved successfully", log: .settings, type: .debug)
+        #endif
     }
 
     /// Resets settings to factory defaults

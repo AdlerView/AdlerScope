@@ -247,11 +247,6 @@ struct AppKitTextEditor: NSViewRepresentable {
     - Native macOS text editing
     - Cursor position tracking
     - Full undo/redo support
-
-    ```swift
-    let greeting = "Hello, World!"
-    print(greeting)
-    ```
     """
 
     AppKitTextEditor(

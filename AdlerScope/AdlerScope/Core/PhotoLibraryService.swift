@@ -62,7 +62,9 @@ class PhotoLibraryService: NSObject {
     func updateAuthorizationStatus() {
         let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
         authorizationStatus = mapAuthorizationStatus(status)
+        #if DEBUG
         logger.debug("Photo Library authorization status: \(String(describing: self.authorizationStatus))")
+        #endif
     }
 
     /// Requests authorization to access the Photo Library
@@ -187,12 +189,16 @@ extension PhotoLibraryService: PHPhotoLibraryChangeObserver {
     /// Registers for photo library change notifications
     func startObservingChanges() {
         PHPhotoLibrary.shared().register(self)
+        #if DEBUG
         logger.debug("Started observing Photo Library changes")
+        #endif
     }
 
     /// Unregisters from photo library change notifications
     func stopObservingChanges() {
         PHPhotoLibrary.shared().unregisterChangeObserver(self)
+        #if DEBUG
         logger.debug("Stopped observing Photo Library changes")
+        #endif
     }
 }

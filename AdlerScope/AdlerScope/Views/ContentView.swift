@@ -9,8 +9,11 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
+import OSLog
 
 struct ContentView: View {
+    private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AdlerScope", category: "ContentView")
+
     // MARK: - Environment
 
     @Environment(\.modelContext) private var modelContext
@@ -468,7 +471,7 @@ struct ContentView: View {
             recentDoc.fileModifiedDate = resourceValues.contentModificationDate
 
         } catch {
-            print("Failed to load document: \(error)")
+            Self.logger.error("Failed to load document: \(error, privacy: .public)")
             loadError = error
         }
     }
@@ -478,7 +481,7 @@ struct ContentView: View {
     @MainActor
     private func saveDocument() async {
         guard let url = currentDocumentURL else {
-            print("No document URL available")
+            Self.logger.warning("No document URL available")
             return
         }
 
@@ -508,7 +511,7 @@ struct ContentView: View {
             }
 
         } catch {
-            print("Failed to save document: \(error)")
+            Self.logger.error("Failed to save document: \(error, privacy: .public)")
             errorAlertMessage = "Failed to save document: \(error.localizedDescription)"
             showErrorAlert = true
         }
@@ -591,7 +594,7 @@ struct ContentView: View {
                 hasUnsavedChanges = false
                 isEditingNewDocument = false
             } catch {
-                print("Failed to save document: \(error)")
+                Self.logger.error("Failed to save document: \(error, privacy: .public)")
                 errorAlertMessage = "Failed to save new document: \(error.localizedDescription)"
                 showErrorAlert = true
             }
@@ -634,7 +637,7 @@ struct ContentView: View {
                 hasUnsavedChanges = false
                 isEditingNewDocument = false
             } catch {
-                print("Failed to save document: \(error)")
+                Self.logger.error("Failed to save document: \(error, privacy: .public)")
                 errorAlertMessage = "Failed to save document as: \(error.localizedDescription)"
                 showErrorAlert = true
             }

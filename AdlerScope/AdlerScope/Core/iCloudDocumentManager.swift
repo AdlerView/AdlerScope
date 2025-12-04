@@ -86,7 +86,9 @@ class ICloudDocumentManager {
     /// Checks iCloud availability and retrieves the container URL
     /// Must be called before any other iCloud operations
     func setupContainer() async {
+        #if DEBUG
         logger.debug("Setting up iCloud container...")
+        #endif
 
         // Capture container identifier before async context
         let containerID = Self.containerIdentifier
@@ -137,7 +139,9 @@ class ICloudDocumentManager {
 
         stopMetadataQuery()
 
+        #if DEBUG
         logger.debug("Starting metadata query for iCloud documents...")
+        #endif
 
         let query = NSMetadataQuery()
         query.searchScopes = [NSMetadataQueryUbiquitousDocumentsScope]
@@ -190,7 +194,9 @@ class ICloudDocumentManager {
         }
         queryObservers = []
 
+        #if DEBUG
         logger.debug("Metadata query stopped")
+        #endif
     }
 
     /// Handles metadata query results
@@ -211,7 +217,9 @@ class ICloudDocumentManager {
         }
 
         self.documents = discoveredDocuments
+        #if DEBUG
         logger.debug("Found \(discoveredDocuments.count) iCloud documents")
+        #endif
     }
 
     /// Parses an NSMetadataItem into an iCloudDocument
@@ -260,7 +268,9 @@ class ICloudDocumentManager {
     /// Initiates download of a document that is not yet available locally
     /// - Parameter url: The URL of the document to download
     func startDownload(at url: URL) async throws {
+        #if DEBUG
         logger.debug("Starting download for: \(url.lastPathComponent)")
+        #endif
 
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             do {
@@ -278,7 +288,9 @@ class ICloudDocumentManager {
     /// The document will still be available in iCloud
     /// - Parameter url: The URL of the document to evict
     func evictLocalCopy(at url: URL) async throws {
+        #if DEBUG
         logger.debug("Evicting local copy: \(url.lastPathComponent)")
+        #endif
 
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             do {
@@ -298,7 +310,9 @@ class ICloudDocumentManager {
     /// - Parameter url: The URL of the document to read
     /// - Returns: The document data
     func readDocument(at url: URL) async throws -> Data {
+        #if DEBUG
         logger.debug("Reading document with coordination: \(url.lastPathComponent)")
+        #endif
 
         return try await withCheckedThrowingContinuation { continuation in
             let coordinator = NSFileCoordinator()
@@ -324,7 +338,9 @@ class ICloudDocumentManager {
     ///   - data: The data to write
     ///   - url: The destination URL
     func writeDocument(_ data: Data, to url: URL) async throws {
+        #if DEBUG
         logger.debug("Writing document with coordination: \(url.lastPathComponent)")
+        #endif
 
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             let coordinator = NSFileCoordinator()
@@ -362,7 +378,9 @@ class ICloudDocumentManager {
         let destinationFilename = filename ?? localURL.lastPathComponent
         let destinationURL = documentsURL.appendingPathComponent(destinationFilename)
 
+        #if DEBUG
         logger.debug("Moving to iCloud: \(localURL.lastPathComponent) -> \(destinationFilename)")
+        #endif
 
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             do {
@@ -382,7 +400,9 @@ class ICloudDocumentManager {
     ///   - cloudURL: The iCloud URL of the document
     ///   - localURL: The destination local URL
     func moveToLocal(from cloudURL: URL, to localURL: URL) async throws {
+        #if DEBUG
         logger.debug("Moving to local: \(cloudURL.lastPathComponent)")
+        #endif
 
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             do {
@@ -399,7 +419,9 @@ class ICloudDocumentManager {
     /// Deletes a document from iCloud
     /// - Parameter url: The URL of the document to delete
     func deleteDocument(at url: URL) async throws {
+        #if DEBUG
         logger.debug("Deleting iCloud document: \(url.lastPathComponent)")
+        #endif
 
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             let coordinator = NSFileCoordinator()

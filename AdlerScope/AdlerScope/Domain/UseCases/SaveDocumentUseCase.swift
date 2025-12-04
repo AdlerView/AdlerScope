@@ -35,7 +35,9 @@ actor SaveDocumentUseCase {
             if fileExists {
                 do {
                     let backupURL = try await documentRepository.createBackup(for: url)
+                    #if DEBUG
                     await os_log("Created backup: %{public}@", log: .document, type: .debug, backupURL.lastPathComponent)
+                    #endif
                 } catch {
                     await os_log("Failed to create backup: %{public}@", log: .document, type: .default, String(describing: error))
                     // Continue with save even if backup fails

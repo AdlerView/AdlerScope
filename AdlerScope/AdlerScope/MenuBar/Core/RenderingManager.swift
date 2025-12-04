@@ -64,10 +64,12 @@ final class RenderingManager {
     /// Renders markdown content immediately (no debouncing)
     /// - Parameter content: Raw markdown string
     func render(content: String) async {
+        #if DEBUG
         // Debug logging only when debug mode is enabled
         if settingsViewModel.settings.editor?.debug == true {
             logger.debug("Rendering markdown (\(content.count) characters)")
         }
+        #endif
 
         isRendering = true
 

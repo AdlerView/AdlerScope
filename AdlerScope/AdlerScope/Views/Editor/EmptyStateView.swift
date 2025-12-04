@@ -68,11 +68,7 @@ struct EmptyStateView: View {
 
 #Preview {
     EmptyStateView(
-        onOpenDocument: {
-            print("Open document tapped")
-        },
-        onNewDocument: {
-            print("New document tapped")
-        }
+        onOpenDocument: { },
+        onNewDocument: { }
     )
 }

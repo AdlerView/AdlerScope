@@ -8,9 +8,11 @@
 
 import AppIntents
 import SwiftData
+import OSLog
 
 /// Opens a markdown document in AdlerScope
 struct OpenDocumentIntent: AppIntent {
+    private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AdlerScope", category: "OpenDocumentIntent")
 
     static var title: LocalizedStringResource = "Open Document"
     static var description = IntentDescription(
@@ -57,7 +59,7 @@ extension OpenDocumentIntent {
         do {
             try await intent.donate()
         } catch {
-            print("Failed to donate OpenDocumentIntent: \(error)")
+            Self.logger.error("Failed to donate OpenDocumentIntent: \(error, privacy: .public)")
         }
     }
 }

@@ -8,8 +8,11 @@
 #if !os(macOS)
 import SwiftUI
 import UniformTypeIdentifiers
+import OSLog
 
 struct DocumentExporter: UIViewControllerRepresentable {
+    private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AdlerScope", category: "DocumentExporter")
+
     let content: String
     let defaultFilename: String
     let onExport: (URL) -> Void
@@ -23,7 +26,7 @@ struct DocumentExporter: UIViewControllerRepresentable {
         do {
             try content.write(to: tempURL, atomically: true, encoding: .utf8)
         } catch {
-            print("Failed to write temporary file: \(error)")
+            Self.logger.error("Failed to write temporary file: \(error, privacy: .public)")
         }
 
         // Create picker for exporting/moving

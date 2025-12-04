@@ -7,9 +7,11 @@
 //
 
 import AppIntents
+import OSLog
 
 /// Changes the editor view mode
 struct SetViewModeIntent: AppIntent {
+    private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AdlerScope", category: "SetViewModeIntent")
 
     static var title: LocalizedStringResource = "Set View Mode"
     static var description = IntentDescription(
@@ -65,7 +67,7 @@ extension SetViewModeIntent {
         do {
             try await intent.donate()
         } catch {
-            print("Failed to donate SetViewModeIntent: \(error)")
+            Self.logger.error("Failed to donate SetViewModeIntent: \(error, privacy: .public)")
         }
     }
 }

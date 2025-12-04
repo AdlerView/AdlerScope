@@ -128,9 +128,9 @@ struct RecentDocumentsSidebarView: View {
     return NavigationSplitView {
         RecentDocumentsSidebarView(
             selectedDocument: $selectedDocument,
-            onOpenDocument: { print("Open document") },
-            onToggleFavorite: { doc in print("Toggle favorite: \(doc.displayName)") },
-            onRemoveDocument: { doc in print("Remove: \(doc.displayName)") }
+            onOpenDocument: { },
+            onToggleFavorite: { _ in },
+            onRemoveDocument: { _ in }
         )
     } detail: {
         Text("Select a document")

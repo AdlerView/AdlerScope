@@ -148,7 +148,9 @@ final class DocumentEditorViewModel {
     // MARK: - Document Management
 
     func toggleFavorite(_ document: RecentDocument) {
+        #if DEBUG
         logger.debug("Toggling favorite for: \(document.displayName)")
+        #endif
         document.isFavorite.toggle()
     }
 
@@ -169,7 +171,9 @@ final class DocumentEditorViewModel {
             if let existing = try RecentDocument.find(url: url, in: modelContext) {
                 existing.lastOpened = Date()
                 selectedDocument = existing
+                #if DEBUG
                 logger.debug("Updated existing document")
+                #endif
                 return
             }
 
@@ -195,7 +199,9 @@ final class DocumentEditorViewModel {
     // MARK: - Cleanup
 
     func reset() {
+        #if DEBUG
         logger.debug("Resetting document state")
+        #endif
         currentFileDocument = MarkdownFileDocument()
         currentDocumentURL = nil
         hasUnsavedChanges = false

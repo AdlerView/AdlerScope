@@ -117,7 +117,9 @@ final class NotificationService: NSObject, ObservableObject {
     func refreshAuthorizationStatus() async {
         let settings = await notificationCenter.notificationSettings()
         authorizationStatus = settings.authorizationStatus
+        #if DEBUG
         logger.debug("Authorization status: \(String(describing: settings.authorizationStatus.rawValue))")
+        #endif
     }
 
     /// Returns detailed notification settings
@@ -173,7 +175,9 @@ final class NotificationService: NSObject, ObservableObject {
     private func registerCategories() {
         let categories = createNotificationCategories()
         notificationCenter.setNotificationCategories(categories)
+        #if DEBUG
         logger.debug("Registered \(categories.count) notification categories")
+        #endif
     }
 
     private func createNotificationCategories() -> Set<UNNotificationCategory> {
@@ -300,13 +304,17 @@ final class NotificationService: NSObject, ObservableObject {
     /// Cancels a pending notification
     func cancelNotification(identifier: String) {
         notificationCenter.removePendingNotificationRequests(withIdentifiers: [identifier])
+        #if DEBUG
         logger.debug("Cancelled notification: \(identifier)")
+        #endif
     }
 
     /// Cancels all pending notifications
     func cancelAllPendingNotifications() {
         notificationCenter.removeAllPendingNotificationRequests()
+        #if DEBUG
         logger.debug("Cancelled all pending notifications")
+        #endif
     }
 
     /// Gets all pending notification requests
@@ -348,7 +356,9 @@ extension NotificationService: UNUserNotificationCenterDelegate {
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
         let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AdlerScope", category: "Notifications")
+        #if DEBUG
         logger.debug("Notification received in foreground: \(notification.request.identifier)")
+        #endif
 
         // Show banner and play sound even when app is in foreground
         return [.banner, .sound, .badge]
@@ -373,7 +383,9 @@ extension NotificationService: UNUserNotificationCenterDelegate {
 
         case UNNotificationDismissActionIdentifier:
             // User dismissed the notification
+            #if DEBUG
             logger.debug("Notification dismissed")
+            #endif
 
         case NotificationAction.viewDocument.rawValue:
             await handleViewDocument(userInfo: userInfo)

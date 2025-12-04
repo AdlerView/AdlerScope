@@ -10,10 +10,13 @@ import Foundation
 import SwiftUI
 import Observation
 import UniformTypeIdentifiers
+import OSLog
 
 /// Manages document state and file operations for WindowGroup
 @Observable
 class DocumentManager {
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AdlerScope", category: "DocumentManager")
+
     // MARK: - Observable Properties
 
     /// Current document URL (nil for new unsaved documents)
@@ -96,7 +99,7 @@ class DocumentManager {
 
             return true
         } catch {
-            print("Failed to open document: \(error)")
+            logger.error("Failed to open document: \(error, privacy: .public)")
             return false
         }
     }
@@ -138,7 +141,7 @@ class DocumentManager {
 
             return true
         } catch {
-            print("Failed to save document: \(error)")
+            logger.error("Failed to save document: \(error, privacy: .public)")
             return false
         }
     }
