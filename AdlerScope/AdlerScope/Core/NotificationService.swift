@@ -442,49 +442,38 @@ extension NotificationService: UNUserNotificationCenterDelegate {
     }
 
     private func handleViewUpdate(userInfo: [AnyHashable: Any]) async {
-        let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AdlerScope", category: "Notifications")
-        logger.info("View update action")
-
-        // Navigate to the updated document if document ID is provided
-        if let documentIDString = userInfo["documentID"] as? String,
-           let documentID = UUID(uuidString: documentIDString) {
-            // Use NavigationService for in-app navigation
-            await MainActor.run {
-                NavigationService.shared.requestOpenDocument(id: documentID)
-            }
-            return
-        }
-
-        // Fallback: open document URL externally if provided
-        if let urlString = userInfo["documentURL"] as? String,
-           let url = URL(string: urlString) {
-            await MainActor.run {
-                #if canImport(UIKit)
-                UIApplication.shared.open(url)
-                #elseif canImport(AppKit)
-                NSWorkspace.shared.open(url)
-                #endif
-            }
-        }
+        await navigateToDocument(userInfo: userInfo, action: "View update")
     }
 
     private func handleOpenReminder(userInfo: [AnyHashable: Any]) async {
-        let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AdlerScope", category: "Notifications")
-        logger.info("Open reminder action")
+        await navigateToDocument(userInfo: userInfo, action: "Open reminder")
+    }
 
-        // Navigate to the associated document if one is provided
+    /// Shared navigation logic for notification action handlers
+    /// - Parameters:
+    ///   - userInfo: Notification payload containing documentID or documentURL
+    ///   - action: Description of the action for logging
+    private func navigateToDocument(userInfo: [AnyHashable: Any], action: String) async {
+        let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AdlerScope", category: "Notifications")
+        logger.info("\(action) action")
+
+        // Navigate to document by ID if provided (preferred for in-app navigation)
         if let documentIDString = userInfo["documentID"] as? String,
            let documentID = UUID(uuidString: documentIDString) {
-            // Use NavigationService for in-app navigation
-            await MainActor.run {
-                NavigationService.shared.requestOpenDocument(id: documentID)
-            }
+            await NavigationService.shared.requestOpenDocument(id: documentID)
             return
         }
 
         // Fallback: open document URL externally if provided
         if let urlString = userInfo["documentURL"] as? String,
            let url = URL(string: urlString) {
+            // Validate URL scheme for security
+            guard let scheme = url.scheme?.lowercased(),
+                  ["file", "http", "https"].contains(scheme) else {
+                logger.warning("Rejected unsafe URL scheme: \(url.scheme ?? "nil", privacy: .public)")
+                return
+            }
+
             await MainActor.run {
                 #if canImport(UIKit)
                 UIApplication.shared.open(url)
@@ -492,7 +481,10 @@ extension NotificationService: UNUserNotificationCenterDelegate {
                 NSWorkspace.shared.open(url)
                 #endif
             }
+            return
         }
+
+        logger.warning("No valid documentID or documentURL provided in userInfo")
     }
 
     private func handleSnoozeReminder(userInfo: [AnyHashable: Any]) async {
