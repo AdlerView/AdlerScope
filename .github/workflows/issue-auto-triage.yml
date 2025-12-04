@@ -1,0 +1,217 @@
+name: Issue Auto-Triage (Swift/SwiftUI)
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      id-token: write
+    steps:
+      - name: Auto-Triage New Issue
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          prompt: |
+            REPO: ${{ github.repository }}
+            ISSUE NUMBER: ${{ github.event.issue.number }}
+            TITLE: ${{ github.event.issue.title }}
+            BODY: ${{ github.event.issue.body }}
+            AUTHOR: ${{ github.event.issue.user.login }}
+
+            Perform automated triage for this new issue in our Swift/SwiftUI macOS application.
+
+            ## Classification
+
+            ### Issue Type (choose primary):
+            - **bug**: Something isn't working correctly
+            - **enhancement**: New feature or improvement request
+            - **swiftui-issue**: SwiftUI-specific rendering or layout problem
+            - **icloud-sync**: iCloud or CloudKit synchronization issue
+            - **performance**: Speed, memory, or efficiency problem
+            - **documentation**: Docs unclear, missing, or incorrect
+            - **question**: User needs help or clarification
+            - **security**: Potential security vulnerability
+            - **crash**: Application crash or fatal error
+
+            ### Component Labels (can select multiple):
+            - **editor**: Text editing, markdown editing, SplitEditorView
+            - **preview**: Preview pane, rendering, PDF export
+            - **icloud**: iCloud Drive integration
+            - **cloudkit**: CloudKit sync functionality
+            - **settings**: Settings/preferences UI and persistence
+            - **app-intents**: Siri shortcuts and App Intents
+            - **image-handling**: Image processing, insertion, manipulation
+            - **file-system**: File operations, security-scoped bookmarks
+            - **swiftdata**: SwiftData models and persistence
+            - **swiftui**: SwiftUI framework issues
+            - **build**: Xcode build or project configuration
+
+            ### Platform Labels (if OS-specific):
+            - **platform-macos**: macOS-specific issue
+            - **platform-ios**: iOS-specific issue (if app supports iOS)
+
+            ### Priority Assessment:
+
+            **priority-critical** (Apply if):
+            - Application crashes on launch
+            - Data loss or corruption
+            - Security vulnerability
+            - Complete feature breakage affecting all users
+
+            **priority-high** (Apply if):
+            - Major functionality broken
+            - Blocks common workflows
+            - Affects many users
+            - iCloud sync failure
+
+            **priority-medium** (Apply if):
+            - Important feature impaired
+            - Workaround exists
+            - Affects some users
+            - UI/UX degradation
+
+            **priority-low** (Apply if):
+            - Minor cosmetic issue
+            - Edge case
+            - Nice-to-have enhancement
+            - Affects very few users
+
+            ## Duplicate Detection
+
+            Search for similar existing issues:
+            ```bash
+            gh search issues --repo ${{ github.repository }} "keywords from title" --limit 5
+            ```
+
+            Check for:
+            - Exact duplicates (same issue)
+            - Very similar issues (likely related)
+            - Resolved issues (possible regression)
+
+            ## Swift/SwiftUI Specific Analysis
+
+            **If Bug Report:**
+            - Check if error logs mention Actor isolation warnings
+            - Look for main thread checker violations
+            - Note if SwiftData/CloudKit errors present
+            - Check for memory warnings or retain cycles
+
+            **If iCloud Sync Issue:**
+            - High priority by default
+            - Add **needs-investigation** label
+
+            **If Performance Issue:**
+            - Note if relates to markdown rendering (500ms debounce target)
+            - Check if settings auto-save mentioned (1s debounce)
+
+            **If Crash:**
+            - ALWAYS priority-critical
+            - Request crash logs if not provided
+
+            ## Label Application
+
+            Apply labels based on your analysis:
+            ```bash
+            gh issue edit ${{ github.event.issue.number }} --add-label "label1,label2,label3"
+            ```
+
+            **Standard Label Sets:**
+            - Crash: `bug,crash,priority-critical,needs-investigation`
+            - Data Loss: `bug,priority-critical,needs-investigation`
+            - iCloud Sync: `bug,icloud-sync,priority-high,needs-investigation`
+            - Feature Request: `enhancement,priority-medium`
+            - SwiftUI Layout: `bug,swiftui-issue,editor,priority-medium`
+            - Documentation: `documentation,priority-low`
+            - Question: `question` (no priority)
+
+            ## Automated Comment
+
+            Post a helpful comment using:
+            ```bash
+            gh issue comment ${{ github.event.issue.number }} --body "COMMENT_TEXT"
+            ```
+
+            ### Comment Templates:
+
+            **If Duplicate Found:**
+            ```markdown
+            Thank you for reporting this! This appears to be a duplicate of #[NUMBER].
+
+            I've linked this issue for tracking. Please see the original issue for updates and workarounds.
+
+            If this is NOT a duplicate and has unique aspects, please let us know!
+            ```
+
+            **If Bug Missing Info:**
+            ```markdown
+            Thank you for reporting this bug! To help us investigate, could you please provide:
+
+            - macOS version
+            - AdlerScope version
+            - Steps to reproduce
+            - Expected behavior
+            - Actual behavior
+            - Screenshots (if applicable)
+            - Console logs (if available)
+
+            For crashes, please include crash logs from Console.app
+            ```
+
+            **If Security Issue:**
+            ```markdown
+            ⚠️ **Security Issue Detected**
+
+            Thank you for reporting this potential security vulnerability. For security issues, we recommend:
+
+            1. Do NOT post sensitive details publicly
+            2. Use GitHub Security Advisories for responsible disclosure
+            3. We'll review privately and issue a fix before public disclosure
+            ```
+
+            **If Feature Request:**
+            ```markdown
+            Thank you for the feature request! We've labeled this for review.
+
+            Community feedback helps prioritize development.
+            Feel free to add more details or use cases that would benefit from this feature!
+            ```
+
+            **If Question:**
+            ```markdown
+            Thank you for your question!
+
+            You might find helpful information in:
+            - README.md
+            - CLAUDE.md
+            - GitHub Discussions
+
+            If these don't answer your question, please provide more details and we'll be happy to help!
+            ```
+
+            **If First-Time Contributor:**
+            ```markdown
+            👋 Welcome to AdlerScope! Thank you for opening your first issue.
+
+            We appreciate your contribution to the project. A maintainer will review this soon.
+            ```
+
+            ## Output Summary
+
+            After applying labels and posting comment, provide brief summary:
+            ```
+            Issue #[NUMBER] triaged:
+            - Type: [type]
+            - Priority: [priority]
+            - Components: [components]
+            - Labels applied: [all labels]
+            - Comment posted: [yes/no]
+            - Duplicate of: [number or none]
+            ```
+
+          claude_args: |
+            --allowedTools "Bash(gh issue:*),Bash(gh search:*)"

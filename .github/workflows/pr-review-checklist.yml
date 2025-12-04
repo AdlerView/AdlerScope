@@ -1,0 +1,166 @@
+name: PR Review - Swift/SwiftUI Checklist
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  checklist-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Comprehensive Checklist Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
+
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            Review this Swift/SwiftUI PR against our comprehensive team checklist.
+            Reference CLAUDE.md for project conventions.
+
+            ## Swift Code Quality Checklist
+
+            ### Error Handling
+            - [ ] No force unwrapping with `!` (use guard/if let/nil coalescing)
+            - [ ] No `try!` (use proper do-catch or try?)
+            - [ ] No `as!` force casting (use conditional casting)
+            - [ ] Errors properly propagated with throws or Result types
+            - [ ] User-facing error messages are clear and helpful
+
+            ### Concurrency & Thread Safety
+            - [ ] UI code properly marked with @MainActor
+            - [ ] Actors used for shared mutable state
+            - [ ] Sendable protocol for types crossing concurrency boundaries
+            - [ ] No data races (verified with Swift 6 concurrency checking)
+            - [ ] Async/await used instead of completion handlers
+            - [ ] Task cancellation properly handled
+
+            ### Memory Management
+            - [ ] Closures use [weak self] where needed to prevent retain cycles
+            - [ ] SwiftUI views don't capture strong references unnecessarily
+            - [ ] @Observable or @ObservableObject lifecycle properly managed
+            - [ ] File handles and resources properly closed (defer blocks)
+            - [ ] Security-scoped resources released (stopAccessingSecurityScopedResource)
+
+            ### SwiftUI Best Practices
+            - [ ] @Observable used instead of @ObservableObject (modern SwiftUI)
+            - [ ] State management appropriate (@State, @Binding, @Environment)
+            - [ ] View composition keeps individual views under 100 lines
+            - [ ] FocusedValues used for environment-specific state
+            - [ ] No unnecessary .onAppear computations
+            - [ ] Proper use of @ViewBuilder for conditional views
+
+            ### Swift API Design Guidelines
+            - [ ] Functions/methods have clear, descriptive names
+            - [ ] Parameters use external labels for clarity
+            - [ ] Boolean properties/methods read naturally (isEnabled, hasContent)
+            - [ ] Factory methods named makeX() or createX()
+            - [ ] Mutating methods end with verb (sort vs sorted)
+
+            ## Clean Architecture Compliance
+
+            ### Layer Separation
+            - [ ] Core/ contains ONLY pure Swift (no UI frameworks)
+            - [ ] Domain/ defines protocols, entities, use cases
+            - [ ] Data/ implements Domain protocols for persistence
+            - [ ] Presentation/ contains ViewModels and Views
+            - [ ] No layer skipping (Presentation must use Domain, not Data directly)
+
+            ### Dependency Direction
+            - [ ] Dependencies flow inward (Presentation → Domain → Core)
+            - [ ] Domain defines interfaces, outer layers implement
+            - [ ] No circular dependencies between layers
+            - [ ] Dependency injection used (protocols, not concrete types)
+
+            ### Composition Over Inheritance
+            - [ ] Prefer protocols and extensions over class hierarchies
+            - [ ] Use protocol composition for multiple behaviors
+            - [ ] Avoid deep inheritance trees
+
+            ## Testing Requirements
+
+            ### Test Coverage (Target: 70%+)
+            - [ ] New features have corresponding unit tests
+            - [ ] Edge cases covered (empty data, nil, boundary conditions)
+            - [ ] Async code properly tested with async/await in tests
+            - [ ] Mock implementations for protocols/dependencies
+            - [ ] Integration tests for Core services
+
+            ### Test Quality
+            - [ ] Tests follow Arrange-Act-Assert pattern
+            - [ ] Test names clearly describe what is being tested
+            - [ ] No flaky tests (no timing dependencies)
+            - [ ] Tests are independent (can run in any order)
+
+            ## Apple Platform Specifics
+
+            ### Security & Entitlements
+            - [ ] File access uses security-scoped bookmarks properly
+            - [ ] Entitlements match actual functionality used
+            - [ ] iCloud container identifiers correct
+            - [ ] App Intents properly declared in Info.plist
+
+            ### Performance
+            - [ ] Markdown rendering uses 500ms debounce (per CLAUDE.md)
+            - [ ] Settings auto-save uses 1s debounce
+            - [ ] Large lists use LazyVStack/LazyHStack
+            - [ ] Image loading is async and cancellable
+            - [ ] SwiftData queries optimized (predicates, fetch limits)
+
+            ### SwiftData Usage
+            - [ ] Models use @Model macro properly
+            - [ ] Relationships configured correctly
+            - [ ] Migrations handled for schema changes
+            - [ ] Background context used for heavy operations
+
+            ## Documentation
+
+            ### Code Documentation
+            - [ ] Public APIs have DocC-style comments (///)
+            - [ ] Complex algorithms have explanation comments
+            - [ ] TODO/FIXME comments have associated issue numbers
+            - [ ] No commented-out code (use git history instead)
+
+            ### Project Documentation
+            - [ ] README.md updated for new features
+            - [ ] CLAUDE.md updated if architecture changes
+            - [ ] Breaking changes documented
+
+            ## Dependencies & Configuration
+
+            ### Swift Package Manager
+            - [ ] Package.resolved committed with dependency changes
+            - [ ] Minimum version constraints specified
+            - [ ] Dependencies from trusted sources
+
+            ### Xcode Project
+            - [ ] Build settings appropriate for target
+            - [ ] No warnings introduced
+            - [ ] Swift language version set to 5.9+
+            - [ ] Concurrency checking enabled
+
+            ## Review Instructions
+
+            For each checklist item:
+            1. Mark [ ] if NOT satisfied or needs attention
+            2. Mark [x] if satisfied
+            3. Add inline comments for specific issues
+            4. Provide summary comment with all unchecked items
+
+            Be specific about what needs fixing and provide code examples.
+            Reference Swift API Design Guidelines and CLAUDE.md conventions.
+
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Read"

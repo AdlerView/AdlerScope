@@ -1,57 +1,86 @@
-name: Claude Code Review
+name: Claude Code Review (Swift/SwiftUI)
 
 on:
   pull_request:
-    types: [opened, synchronize]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+    types: [opened, synchronize, ready_for_review, reopened]
 
 jobs:
-  claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
-
+  code-review:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
       issues: read
       id-token: write
-
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
-      - name: Run Claude Code Review
-        id: claude-review
+      - name: Swift/SwiftUI Code Review
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true  # Visual progress tracking
+
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
 
-            Please review this pull request and provide feedback on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Performance considerations
-            - Security concerns
-            - Test coverage
+            You are reviewing a Swift/SwiftUI macOS application. Review this PR following the coding conventions in CLAUDE.md.
 
-            Use the repository's CLAUDE.md for guidance on style and conventions. Be constructive and helpful in your feedback.
+            ## Project Context (from CLAUDE.md)
+            - **Language**: Swift 5.9+ with strict concurrency checking
+            - **Frameworks**: SwiftUI, SwiftData, PDFKit
+            - **Architecture**: Clean Architecture (Core → Domain → Data → Presentation)
+            - **Concurrency**: Actor-based with @MainActor for UI components
+            - **Dependencies**: swift-markdown 0.5.0+
 
-            Use `gh pr comment` with your Bash tool to leave your review as a comment on the PR.
+            ## Swift Code Quality Review
+            - Check for force unwrapping (!, try!, as!) - should use proper error handling
+            - Verify proper Actor isolation and @MainActor annotations for UI code
+            - Look for retain cycles in closures (check [weak self] usage)
+            - Ensure Sendable protocol conformance for shared state
+            - Validate proper use of @Observable (not @ObservableObject) per modern SwiftUI
+            - Check for thread-safety violations
 
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://docs.claude.com/en/docs/claude-code/cli-reference for available options
-          claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
+            ## Clean Architecture Compliance
+            - Verify Core/ contains only pure Swift (no UI, no external deps)
+            - Ensure Domain/ has protocol-based repository contracts
+            - Check Data/ properly implements repository protocols
+            - Validate Presentation/ follows MVVM with ViewModels
+            - No direct Data ↔ Presentation coupling (must go through Domain)
 
+            ## SwiftUI Best Practices
+            - Proper use of FocusedValues for editor context
+            - State management (@State, @Binding, @Environment, @Observable)
+            - View composition over massive views
+            - Performance: Avoid unnecessary re-renders
+            - Prefer composition over inheritance
+
+            ## Apple Platform Specifics
+            - Security-scoped bookmarks for file access (check proper start/stop)
+            - iCloud/CloudKit integration patterns
+            - Entitlements changes require extra scrutiny
+            - NSTextView integration follows proper SwiftUI wrapping
+
+            ## Performance Considerations
+            - Check for 500ms debounce on markdown rendering (per CLAUDE.md)
+            - Settings auto-save should use 1s debounce
+            - Efficient SwiftData queries (no N+1 problems)
+            - Proper memory management in image handling
+
+            ## Testing & Documentation
+            - New features should have corresponding tests in AdlerScopeTests/
+            - Complex logic needs inline documentation
+            - Public APIs should have DocC-style comments
+
+            **Output Instructions:**
+            - Use `gh pr comment` for overall feedback
+            - Use `mcp__github_inline_comment__create_inline_comment` for specific code issues
+            - Reference Swift API Design Guidelines when suggesting changes
+            - Be constructive and specific in all feedback
+
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue:*),Bash(gh search:*)"

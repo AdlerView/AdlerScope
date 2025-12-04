@@ -1,0 +1,182 @@
+name: Weekly Repository Maintenance (Swift/SwiftUI)
+
+on:
+  schedule:
+    - cron: "0 0 * * 0"  # Every Sunday at midnight UTC
+  workflow_dispatch:      # Manual trigger for testing
+
+jobs:
+  maintenance:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Full history for comprehensive analysis
+
+      - name: Setup Swift (if available on runner)
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "5.9"
+        continue-on-error: true  # Don't fail if Swift unavailable
+
+      - name: Weekly Swift/SwiftUI Project Maintenance
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          prompt: |
+            REPO: ${{ github.repository }}
+
+            Perform weekly maintenance for this Swift/SwiftUI macOS application.
+            Create a comprehensive report as a GitHub issue.
+
+            ## 1. Swift Package Manager Dependencies
+            - Read AdlerScope.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+            - List all dependencies with current versions
+            - Check swift-markdown version (should be 0.5.0+)
+            - Search GitHub for known CVEs in dependencies
+            - Flag deprecated packages or 2+ years without updates
+
+            ## 2. Xcode Project Health
+            - Check for deprecated build settings in project.pbxproj
+            - Verify Swift language version (should be 5.9+)
+            - Confirm SWIFT_STRICT_CONCURRENCY = complete
+            - Look for unused targets or orphaned file references
+            - Search for deprecated APIs (TODO or FIXME comments)
+
+            ## 3. SwiftData & Data Migrations
+            - Check AdlerScope/Data/ for @Model classes
+            - Look for schema migration code
+            - Verify migration paths for model changes
+            - Check for missing @Transient on computed properties
+
+            ## 4. Code Quality Scan
+            **Anti-Patterns:**
+            - Force unwrapping (!, try!, as!) in production code
+            - TODO/FIXME comments
+            - Print statements (should use os_log)
+            - Commented-out code blocks
+            - Closures without [weak self] (retain cycle risks)
+
+            **Commands:**
+            ```bash
+            grep -r "!" --include="*.swift" AdlerScope/ | grep -v "Tests/"
+            grep -r "TODO:\|FIXME:" --include="*.swift" AdlerScope/
+            grep -r "print(" --include="*.swift" AdlerScope/ | grep -v "Tests/"
+            ```
+
+            ## 5. Testing Health
+            - Count test files in AdlerScopeTests/ (target: 49 files)
+            - Estimate coverage (target: 70%+)
+            - Identify untested modules
+            - Review recent test failures in GitHub Actions
+            - Flag flaky tests or tests with timing dependencies
+
+            ## 6. Documentation Health
+            - Check README.md for outdated examples
+            - Verify CLAUDE.md matches current architecture
+            - Look for broken markdown links
+            - Count public APIs lacking DocC comments
+
+            ## 7. Architecture Compliance
+            **Clean Architecture Verification:**
+            ```bash
+            # Core/ and Domain/ should NOT import SwiftUI
+            grep -r "import SwiftUI" AdlerScope/Core/ AdlerScope/Domain/
+            # Should return empty - any results are violations
+            ```
+            - Verify dependency direction (Presentation → Domain → Core)
+            - Check for circular dependencies
+
+            ## 8. Performance Bottlenecks
+            - Search for synchronous file I/O on main thread
+            - Look for missing @MainActor on UI components
+            - Check for N+1 query patterns in SwiftData
+            - Verify debounce usage (500ms for render, 1s for settings)
+
+            ## 9. Security Scan
+            - Search for hardcoded secrets or API keys
+            - Check for print() statements that might log sensitive data
+            - Verify no .env or credential files in git
+            - Look for insecure random number generation
+
+            ## 10. Issue and PR Hygiene
+            **Stale Issues (>90 days):**
+            ```bash
+            gh issue list --limit 100 --json number,title,createdAt,url
+            ```
+            **Stale PRs (>30 days):**
+            - List open PRs older than 30 days
+            - Note PRs with merge conflicts
+
+            ## Output: Create GitHub Issue
+
+            Create a GitHub issue using:
+            ```bash
+            gh issue create --title "📋 Weekly Maintenance Report - $(date +%Y-%m-%d)" --body "REPORT_CONTENT" --label "maintenance,automated"
+            ```
+
+            **Issue Structure:**
+            ```markdown
+            # Weekly Maintenance Report - [DATE]
+
+            Generated automatically by repository maintenance workflow.
+
+            ## Executive Summary
+            [Brief overview of findings - 2-3 sentences]
+
+            ## 🔴 Critical Items (Immediate Action)
+            [List items requiring immediate attention]
+
+            ## 🟡 Important Items (This Week)
+            [List items to address soon]
+
+            ## 🟢 Informational Items
+            [List nice-to-have improvements]
+
+            ## Detailed Findings
+
+            ### 1. Dependency Health
+            [Details]
+
+            ### 2. Code Quality
+            [Details]
+
+            ### 3. Testing Health
+            [Details]
+
+            ### 4. Architecture & Performance
+            [Details]
+
+            ### 5. Documentation
+            [Details]
+
+            ### 6. Security
+            [Details]
+
+            ### 7. Issue & PR Hygiene
+            [Details]
+
+            ## Recommendations
+            [Numbered list of actionable recommendations]
+
+            ## Metrics
+            - Total source files: [count]
+            - Test files: [count]
+            - Open issues: [count]
+            - Open PRs: [count]
+            - Force unwraps found: [count]
+            - TODO/FIXME comments: [count]
+
+            ---
+            *Generated by claude-code-action maintenance workflow*
+            ```
+
+          claude_args: |
+            --allowedTools "Read,Bash(gh issue:*),Bash(gh pr:*),Bash(gh search:*),Bash(git:*),Bash(grep:*),Bash(find:*),Bash(wc:*),Bash(date:*)"

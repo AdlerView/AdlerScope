@@ -1,0 +1,161 @@
+name: PR Review - Apple Security Best Practices
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  security-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Apple Platform Security Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
+
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            Perform comprehensive SECURITY REVIEW for this Swift/SwiftUI macOS application.
+            Focus on Apple platform security best practices and common vulnerabilities.
+
+            ## Apple Platform Security Framework - 12 Categories
+
+            ### 1. App Sandbox & Entitlements Security
+            **Review AdlerScope.entitlements if modified:**
+            - Principle of Least Privilege: Only necessary entitlements enabled
+            - com.apple.security.app-sandbox: Must remain TRUE
+            - File Access: Read-only vs read-write appropriately scoped
+            - iCloud Containers: Identifiers match app bundle ID pattern
+            **Severity: CRITICAL** - Entitlement weakening exposes user data
+
+            ### 2. Security-Scoped Bookmarks (File Access)
+            **Required pattern:**
+            ```swift
+            guard bookmarkData.startAccessingSecurityScopedResource() else { return }
+            defer { bookmarkData.stopAccessingSecurityScopedResource() }
+            // File operations here
+            ```
+            - Check for missing startAccessingSecurityScopedResource() calls
+            - Check for missing defer with stopAccessingSecurityScopedResource()
+            - File operations outside security-scoped access
+            **Severity: CRITICAL** - Bypasses sandbox, data access violations
+
+            ### 3. iCloud & CloudKit Security
+            - CKRecord types use appropriate zones (private/shared/public)
+            - Sensitive data in private database only
+            - CloudKit errors don't leak sensitive information
+            - Quota exceeded handled without data loss
+            **Severity: HIGH** - Cloud data exposure or loss
+
+            ### 4. SwiftData Security
+            - SwiftData store uses FileProtectionType.complete
+            - Sensitive fields encrypted or marked @Transient
+            - No sensitive data in schema that's backed up unencrypted
+            - Migration handles data securely
+            **Severity: HIGH** - Local data exposure
+
+            ### 5. App Intents (Siri) Security
+            - Intent authentication required where needed
+            - User confirmation for destructive operations
+            - Sensitive data not exposed in Siri UI
+            - Intent parameters properly validated
+            **Severity: MEDIUM** - Voice-activated data access
+
+            ### 6. Photo Library Access
+            - Use PHPickerViewController (not legacy UIImagePickerController)
+            - Request only necessary asset types
+            - Handle limited photo library access
+            - Photos not stored insecurely
+            **Severity: MEDIUM** - Photo library privacy
+
+            ### 7. Keychain Security (if applicable)
+            - kSecAttrAccessible set appropriately (not always accessible)
+            - Keychain items use proper access control
+            - No secrets hardcoded before keychain storage
+            - Keychain queries use specific identifiers
+            **Severity: CRITICAL** - Credential exposure
+
+            ### 8. Code-Level Security Vulnerabilities
+            **Input Validation:**
+            - User input sanitized before file operations
+            - URL schemes validated (no arbitrary URL opening)
+            - Markdown content sanitized to prevent injection
+            - File paths validated (no directory traversal)
+
+            **Cryptography:**
+            - Use CryptoKit, not custom crypto
+            - No hardcoded encryption keys
+            - Random number generation uses SecRandomCopyBytes
+            **Severity: HIGH** - Code execution or data corruption
+
+            ### 9. Inter-Process Communication
+            - XPC connections properly authenticated (if used)
+            - Custom URL schemes validated
+            - No sensitive data in URL parameters
+            - URL handling sanitizes input
+            **Severity: HIGH** - IPC exploitation
+
+            ### 10. Logging & Debugging
+            - No passwords or tokens in logs
+            - os_log used with proper privacy annotations
+            - User data redacted in logs (use .private)
+            - Debug code removed before production
+            **Example:** os_log("User: %{private}s", userName) ✅
+            **Severity: MEDIUM** - Information disclosure
+
+            ### 11. Info.plist Security
+            - NSPhotoLibraryUsageDescription: Accurate and minimal
+            - Document types: Only necessary types registered
+            - URL types: Custom schemes secured
+            - ATS (App Transport Security): No exceptions without justification
+            **Severity: MEDIUM** - Configuration weakening
+
+            ### 12. Third-Party Dependencies
+            - Dependencies from verified publishers
+            - Check for known CVEs in dependency versions
+            - No unnecessary network-accessing dependencies
+            - License compatibility reviewed
+            **Severity: HIGH** - Supply chain vulnerabilities
+
+            ## Review Output Format
+
+            For each security issue found:
+            **Title:** [Brief description]
+            **Severity:** CRITICAL | HIGH | MEDIUM | LOW
+            **Category:** [One of the 12 categories above]
+            **Location:** File:Line
+            **Issue:** [Detailed explanation]
+            **Impact:** [What attacker could do]
+            **Remediation:** [Specific fix with code example]
+            **Reference:** [Apple documentation or OWASP link]
+
+            Summary comment structure:
+            ```
+            ## Security Review Summary
+            ### CRITICAL Issues (Immediate Action Required)
+            - [List with links]
+            ### HIGH Priority Issues
+            - [List with links]
+            ### MEDIUM Priority Issues
+            - [List with links]
+            ### ✅ Security Checks Passed
+            - [List categories passed]
+            ```
+
+            Use inline comments for specific code issues.
+            Be precise about security implications.
+
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Read"

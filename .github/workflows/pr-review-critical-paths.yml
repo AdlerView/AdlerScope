@@ -1,0 +1,117 @@
+name: PR Review - Critical Paths (Swift/SwiftUI)
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - "AdlerScope/Core/**"
+      - "AdlerScope/Domain/**"
+      - "AdlerScope/Services/**"
+      - "AdlerScope/AdlerScope.entitlements"
+      - "AdlerScope/Info.plist"
+      - "AdlerScope.xcodeproj/project.pbxproj"
+      - "AdlerScope.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
+
+jobs:
+  critical-path-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Critical Path Security Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
+
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            ⚠️ **CRITICAL PATH REVIEW** - This PR modifies core application files.
+
+            ## Files Under Review
+            This PR changes one or more critical files:
+            - **Core/**: Pure business logic, services (iCloud, CloudKit, PhotoLibrary)
+            - **Domain/**: Entity models and repository protocols
+            - **Services/**: FileSystemService and core utilities
+            - **Entitlements**: Sandbox, iCloud, CloudKit, Siri permissions
+            - **Info.plist**: App configuration, document types, iCloud setup
+            - **Xcode Project**: Build settings, dependencies
+
+            ## Security-Focused Review Checklist
+
+            ### 1. iCloud/CloudKit Security
+            - Verify proper CKRecord security and permissions
+            - Check CloudKit zone configurations
+            - Validate iCloud container identifiers match entitlements
+            - Ensure proper error handling for sync failures
+            - Check for data loss scenarios in conflict resolution
+
+            ### 2. Security-Scoped Bookmarks
+            - All file access must use security-scoped bookmarks
+            - Verify proper startAccessingSecurityScopedResource() calls
+            - Confirm stopAccessingSecurityScopedResource() in defer blocks
+            - Check for bookmark stale handling
+            - Validate bookmark data persistence
+
+            ### 3. Entitlements Changes
+            - Any entitlement changes require detailed justification
+            - Verify entitlements match Info.plist capabilities
+            - Check for minimum necessary permissions (principle of least privilege)
+            - Validate iCloud key-value store vs ubiquity container usage
+            - Ensure App Sandbox is not weakened
+
+            ### 4. Actor Isolation & Thread Safety
+            - Core services must use Actors for thread safety
+            - Verify @MainActor for all UI-touching code
+            - Check for data races in concurrent access
+            - Validate Sendable conformance for shared types
+            - Ensure proper task isolation
+
+            ### 5. Clean Architecture Boundaries
+            - Core/ must have ZERO UIKit/SwiftUI imports
+            - Domain/ should only depend on Foundation
+            - Verify dependency injection via protocols
+            - Check for circular dependencies
+            - Validate repository pattern implementation
+
+            ### 6. Data Protection
+            - SwiftData models use proper access control
+            - Sensitive data uses appropriate FileProtection
+            - Check for data exposure in logs or errors
+            - Validate proper keychain usage if applicable
+
+            ### 7. Package Dependencies (Package.resolved)
+            - Review new dependencies for security track record
+            - Check for known CVEs in dependency versions
+            - Verify dependency sources (trusted publishers)
+            - Validate minimum version constraints
+
+            ### 8. Xcode Project Changes
+            - Review build setting changes (especially code signing)
+            - Check for weakened security flags
+            - Validate framework linkage changes
+            - Ensure proper Swift version and concurrency settings
+
+            ## Output Format
+            Rate severity: **CRITICAL**, **HIGH**, **MEDIUM**, **LOW**
+
+            For each issue found:
+            - Severity level and category
+            - Specific file and line number
+            - Security implication
+            - Recommended fix with code example
+
+            Use inline comments for code-specific issues.
+            Provide summary comment with all findings by severity.
+
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Read"
