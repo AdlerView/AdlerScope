@@ -8,9 +8,11 @@
 
 import AppIntents
 import SwiftData
+import OSLog
 
 /// Searches for documents by name
 struct SearchDocumentsIntent: AppIntent {
+    private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AdlerScope", category: "SearchDocumentsIntent")
 
     static var title: LocalizedStringResource = "Search Documents"
     static var description = IntentDescription(
@@ -97,7 +99,7 @@ extension SearchDocumentsIntent {
         do {
             try await intent.donate()
         } catch {
-            print("Failed to donate SearchDocumentsIntent: \(error)")
+            Self.logger.error("Failed to donate SearchDocumentsIntent: \(error, privacy: .public)")
         }
     }
 }

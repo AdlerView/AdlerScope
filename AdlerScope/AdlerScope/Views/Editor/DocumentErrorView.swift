@@ -56,7 +56,7 @@ struct DocumentErrorView: View {
     DocumentErrorView(
         error: NSError(domain: "TestError", code: 404, userInfo: [NSLocalizedDescriptionKey: "File not found"]),
         document: RecentDocument.sample(),
-        onRetry: { print("Retry tapped") },
-        onRemove: { print("Remove tapped") }
+        onRetry: { },
+        onRemove: { }
     )
 }

@@ -26,7 +26,9 @@ final class FileSystemService {
 
         defer {
             url.stopAccessingSecurityScopedResource()
+            #if DEBUG
             logger.debug("Stopped accessing security-scoped resource")
+            #endif
         }
 
         do {

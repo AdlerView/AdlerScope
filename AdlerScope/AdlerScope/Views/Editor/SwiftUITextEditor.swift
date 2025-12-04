@@ -89,11 +89,6 @@ struct SwiftUITextEditor: View {
     - Native Find Navigator
     - Drag & Drop support
     - Undo/Redo
-
-    ```swift
-    let greeting = "Hello, World!"
-    print(greeting)
-    ```
     """
 
     SwiftUITextEditor(

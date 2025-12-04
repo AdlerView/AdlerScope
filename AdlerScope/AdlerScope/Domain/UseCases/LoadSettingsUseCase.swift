@@ -31,7 +31,9 @@ actor LoadSettingsUseCase {
             let validatedSettings = loadedSettings.validated()
 
             // Log if validation changed anything (note: AppSettings is now a class, so identity comparison)
+            #if DEBUG
             await os_log("Settings loaded successfully", log: .settings, type: .debug)
+            #endif
 
             return validatedSettings
         } catch {

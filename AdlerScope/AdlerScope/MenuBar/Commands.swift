@@ -588,7 +588,7 @@ struct Commands: SwiftUI.Commands {
         CommandMenu("Format") {
             Menu("Font") {
                 Button("Show Fonts") {
-                    NSFontManager.shared.orderFrontFontPanel(nil)
+                    NSFontManager.shared.orderFrontFontPanel(nil as Any?)
                 }
                 .keyboardShortcut("t", modifiers: .command)
 

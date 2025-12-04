@@ -8,6 +8,7 @@
 
 import Foundation
 import SwiftData
+import OSLog
 
 // MARK: - Recent Document Model
 
@@ -15,6 +16,8 @@ import SwiftData
 /// Used in sidebar for quick access to frequently used files
 @Model
 final class RecentDocument {
+    private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "AdlerScope", category: "RecentDocument")
+
     /// Unique identifier
     var id: UUID = UUID()
 
@@ -81,7 +84,7 @@ final class RecentDocument {
             self.bookmarkData = data
             return true
         } catch {
-            print("Failed to create bookmark for \(url.path): \(error)")
+            Self.logger.error("Failed to create bookmark for \(self.url.path): \(error, privacy: .public)")
             return false
         }
     }
@@ -138,7 +141,7 @@ final class RecentDocument {
             self.fileSize = resourceValues.fileSize.map { Int64($0) }
             self.fileModifiedDate = resourceValues.contentModificationDate
         } catch {
-            print("Failed to update metadata for \(displayName): \(error)")
+            Self.logger.error("Failed to update metadata for \(self.displayName): \(error, privacy: .public)")
         }
     }
 }

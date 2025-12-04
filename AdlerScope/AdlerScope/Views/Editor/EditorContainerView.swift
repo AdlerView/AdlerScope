@@ -116,9 +116,9 @@ private final class PreviewSettingsRepository: SettingsRepository {
             loadError: $error,
             parseMarkdownUseCase: container.parseMarkdownUseCase,
             settingsViewModel: settingsVM,
-            onSave: { print("Save") },
-            onRetry: { print("Retry") },
-            onRemove: { print("Remove") }
+            onSave: { },
+            onRetry: { },
+            onRemove: { }
         )
     }
 }

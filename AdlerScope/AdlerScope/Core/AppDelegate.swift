@@ -79,7 +79,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
     private func handleRemoteNotificationLaunch(payload: [AnyHashable: Any]) {
         // Handle app launch from notification tap
+        #if DEBUG
         logger.debug("Processing notification launch payload")
+        #endif
         // Extract relevant data and navigate to appropriate content
     }
 
@@ -159,7 +161,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Private Methods
 
     private func handleRemoteNotification(userInfo: [String: Any]) {
+        #if DEBUG
         logger.debug("Processing remote notification")
+        #endif
 
         // Check for silent notification
         if let contentAvailable = userInfo["content-available"] as? Int, contentAvailable == 1 {
