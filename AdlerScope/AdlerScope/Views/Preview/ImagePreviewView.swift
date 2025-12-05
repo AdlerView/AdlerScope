@@ -4,7 +4,7 @@
 //  AdlerScope
 //
 //  Renders images in the markdown preview.
-//  Loads images from the sidecar directory using SidecarManager.
+//  Supports local files (absolute, relative, sidecar) and remote URLs.
 //
 
 import SwiftUI
@@ -17,20 +17,36 @@ struct ImagePreviewView: View {
     let sidecarManager: SidecarManager?
 
     @State private var loadedImage: NSImage?
-    @State private var loadState: LoadState = .loading
+    @State private var loadState: LoadState = .loading(progress: nil)
+    @State private var loadTask: Task<Void, Never>?
 
-    enum LoadState {
-        case loading
+    // Use the shared image loader via the use case
+    private let loadImageUseCase: LoadImageUseCase
+
+    enum LoadState: Equatable {
+        case loading(progress: Double?)
         case loaded
         case missing
         case corrupt
     }
 
+    // MARK: - Initialization
+
+    init(image: Markdown.Image, sidecarManager: SidecarManager?) {
+        self.image = image
+        self.sidecarManager = sidecarManager
+        self.loadImageUseCase = LoadImageUseCase(imageLoader: SecureImageLoader.shared)
+    }
+
     var body: some View {
         Group {
             switch loadState {
-            case .loading:
-                loadingPlaceholder
+            case .loading(let progress):
+                if isRemoteSource, let p = progress {
+                    downloadingPlaceholder(progress: p)
+                } else {
+                    loadingPlaceholder
+                }
 
             case .loaded:
                 if let nsImage = loadedImage {
@@ -53,14 +69,21 @@ struct ImagePreviewView: View {
         .onAppear {
             loadImage()
         }
+        .onDisappear {
+            loadTask?.cancel()
+        }
         // Retry loading when sidecarManager becomes available or updates
         .onChange(of: sidecarManager?.sidecarURL) { _, _ in
-            if loadState == .loading || loadState == .missing {
+            if case .loading = loadState {
+                loadImage()
+            } else if case .missing = loadState {
                 loadImage()
             }
         }
         .onChange(of: sidecarManager?.imageManifest.count) { _, _ in
-            if loadState == .loading || loadState == .missing {
+            if case .loading = loadState {
+                loadImage()
+            } else if case .missing = loadState {
                 loadImage()
             }
         }
@@ -72,8 +95,14 @@ struct ImagePreviewView: View {
         image.plainText
     }
 
-    private var filename: String {
+    private var source: String {
         image.source ?? ""
+    }
+
+    /// Whether the image source is a remote URL
+    private var isRemoteSource: Bool {
+        let trimmed = source.trimmingCharacters(in: .whitespaces).lowercased()
+        return trimmed.hasPrefix("http://") || trimmed.hasPrefix("https://")
     }
 
     // MARK: - Placeholders
@@ -86,10 +115,36 @@ struct ImagePreviewView: View {
         )
     }
 
+    private func downloadingPlaceholder(progress: Double) -> some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.down.circle")
+                    .foregroundStyle(.secondary)
+
+                Text("Downloading... \(Int(progress * 100))%")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            ProgressView(value: progress, total: 1.0)
+                .progressViewStyle(.linear)
+                .frame(maxWidth: 200)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .background(Color.secondary.opacity(0.1))
+        .cornerRadius(6)
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+        )
+    }
+
     private var missingPlaceholder: some View {
         placeholderView(
             icon: "questionmark.square.dashed",
-            text: altText.isEmpty ? "Image not found: \(filename)" : altText,
+            text: altText.isEmpty ? "Image not found: \(source)" : altText,
             backgroundColor: Color.secondary.opacity(0.1)
         )
     }
@@ -97,7 +152,7 @@ struct ImagePreviewView: View {
     private var corruptPlaceholder: some View {
         placeholderView(
             icon: "exclamationmark.triangle",
-            text: "Cannot load image: \(filename)",
+            text: "Cannot load image: \(source)",
             backgroundColor: Color.red.opacity(0.1)
         )
     }
@@ -126,67 +181,55 @@ struct ImagePreviewView: View {
     // MARK: - Image Loading
 
     private func loadImage() {
-        guard let source = image.source, !source.isEmpty else {
+        guard !source.isEmpty else {
             loadState = .missing
             return
         }
 
-        // Check if this is a URL or a local filename
-        if source.hasPrefix("http://") || source.hasPrefix("https://") {
-            // Remote URL - for now show as missing (could add async loading later)
-            loadState = .missing
-            return
-        }
+        // Cancel any existing load task
+        loadTask?.cancel()
 
-        // Strategy 1: Try to resolve via SidecarManager manifest
-        if let manager = sidecarManager,
-           let url = manager.resolveImage(filename: source) {
-            loadFromURL(url)
-            return
-        }
+        // Reset state
+        loadState = .loading(progress: nil)
 
-        // Strategy 2: Try direct path in sidecar directory
-        if let manager = sidecarManager,
-           let sidecarURL = manager.sidecarURL {
-            let imageURL = sidecarURL.appendingPathComponent(source)
-            if FileManager.default.fileExists(atPath: imageURL.path) {
-                loadFromURL(imageURL)
-                return
+        // Start new load task
+        loadTask = Task {
+            let result = await loadImageUseCase.execute(
+                source: source,
+                altText: altText,
+                documentURL: sidecarManager?.documentURL,
+                sidecarManager: sidecarManager,
+                onProgress: { @Sendable progress in
+                    Task { @MainActor in
+                        // Only update if still in loading state
+                        if case .loading = loadState {
+                            loadState = .loading(progress: progress)
+                        }
+                    }
+                }
+            )
+
+            // Check if cancelled
+            guard !Task.isCancelled else { return }
+
+            // Update state on main actor
+            await MainActor.run {
+                switch result {
+                case .success(let nsImage):
+                    loadedImage = nsImage
+                    loadState = .loaded
+
+                case .missing:
+                    loadState = .missing
+
+                case .corrupt:
+                    loadState = .corrupt
+
+                case .loading:
+                    // Should not happen after execute completes
+                    break
+                }
             }
-        }
-
-        // Strategy 3: Try computing sidecar URL from documentURL
-        if let manager = sidecarManager,
-           let documentURL = manager.documentURL {
-            let sidecarURL = SidecarManager.sidecarURL(for: documentURL)
-            let imageURL = sidecarURL.appendingPathComponent(source)
-            if FileManager.default.fileExists(atPath: imageURL.path) {
-                loadFromURL(imageURL)
-                return
-            }
-        }
-
-        // No sidecar manager or image not found
-        loadState = .missing
-    }
-
-    private func loadFromURL(_ url: URL) {
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            loadState = .missing
-            return
-        }
-
-        // Try reading file data
-        do {
-            let data = try Data(contentsOf: url)
-            if let nsImage = NSImage(data: data), nsImage.isValid {
-                loadedImage = nsImage
-                loadState = .loaded
-            } else {
-                loadState = .corrupt
-            }
-        } catch {
-            loadState = .corrupt
         }
     }
 }
@@ -195,6 +238,20 @@ struct ImagePreviewView: View {
 
 #Preview("Image - Loading") {
     let markdown = "![Test Image](test.png)"
+    let doc = Document(parsing: markdown)
+
+    if let paragraph = Array(doc.children).first as? Paragraph,
+       let image = Array(paragraph.children).first as? Markdown.Image {
+        ImagePreviewView(image: image, sidecarManager: nil)
+            .frame(width: 400)
+            .padding()
+    } else {
+        Text("Failed to parse image")
+    }
+}
+
+#Preview("Image - Remote URL") {
+    let markdown = "![Remote Image](https://picsum.photos/400/300)"
     let doc = Document(parsing: markdown)
 
     if let paragraph = Array(doc.children).first as? Paragraph,
