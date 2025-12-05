@@ -58,11 +58,23 @@ struct ImageSourceResolver: Sendable {
         }
 
         // 4. Sidecar image (default - just a filename or relative path within sidecar)
+
+        // Security: Reject filenames with path traversal attempts
+        if containsPathTraversal(trimmed) {
+            return .sidecar(filename: trimmed, resolvedURL: nil)
+        }
+
         let resolvedURL = sidecarManager?.resolveImage(filename: trimmed)
 
         // Also check if it exists directly in sidecar directory
         if resolvedURL == nil, let sidecarURL = sidecarManager?.sidecarURL {
-            let directURL = sidecarURL.appendingPathComponent(trimmed)
+            let directURL = sidecarURL.appendingPathComponent(trimmed).standardized
+
+            // Security: Verify resolved URL is still within sidecar directory
+            guard directURL.path.hasPrefix(sidecarURL.path) else {
+                return .sidecar(filename: trimmed, resolvedURL: nil)
+            }
+
             if FileManager.default.fileExists(atPath: directURL.path) {
                 return .sidecar(filename: trimmed, resolvedURL: directURL)
             }
@@ -75,7 +87,34 @@ struct ImageSourceResolver: Sendable {
 
     /// Checks if a source string is a remote URL
     private func isRemoteURL(_ source: String) -> Bool {
-        source.lowercased().hasPrefix("http://") || source.lowercased().hasPrefix("https://")
+        let lowercased = source.lowercased()
+        return lowercased.hasPrefix("http://") || lowercased.hasPrefix("https://")
+    }
+
+    /// Checks if a filename contains path traversal sequences
+    /// - Parameter filename: The filename to check
+    /// - Returns: true if the filename contains suspicious path traversal sequences
+    private func containsPathTraversal(_ filename: String) -> Bool {
+        // Reject common path traversal patterns
+        let dangerousPatterns = [
+            "..",           // Parent directory traversal
+            "//",           // Double slash
+            "\\",           // Backslash (Windows-style)
+            "\0",           // Null byte
+        ]
+
+        for pattern in dangerousPatterns {
+            if filename.contains(pattern) {
+                return true
+            }
+        }
+
+        // Also reject absolute paths that start with /
+        if filename.hasPrefix("/") {
+            return true
+        }
+
+        return false
     }
 }
 

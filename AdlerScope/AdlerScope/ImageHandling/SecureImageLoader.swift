@@ -38,8 +38,14 @@ actor SecureImageLoader {
     /// In-memory cache of loaded local images
     private var cache: [URL: NSImage] = [:]
 
+    /// Insertion order for local cache (for FIFO eviction)
+    private var cacheOrder: [URL] = []
+
     /// In-memory cache for remote images (HTTP/HTTPS)
     private var remoteCache: [URL: NSImage] = [:]
+
+    /// Insertion order for remote cache (for FIFO eviction)
+    private var remoteCacheOrder: [URL] = []
 
     /// Active download tasks to prevent duplicate downloads
     private var activeDownloads: [URL: Task<ImageLoadResult, Never>] = [:]
@@ -173,6 +179,11 @@ actor SecureImageLoader {
             return .corrupt(altText: altText)
         }
 
+        // Force image data to be fully loaded before security scope is stopped
+        // NSImage uses lazy loading, so we need to access representations to ensure
+        // all data is loaded into memory while we still have security scope access
+        _ = image.representations
+
         // Cache the image
         addToCache(url: url, image: image)
 
@@ -279,6 +290,11 @@ actor SecureImageLoader {
         }
 
         for try await byte in bytes {
+            // Check for task cancellation periodically (every 4KB)
+            if receivedLength % 4096 == 0 {
+                try Task.checkCancellation()
+            }
+
             data.append(byte)
             receivedLength += 1
 
@@ -340,41 +356,58 @@ actor SecureImageLoader {
 
     /// Adds an image to the local cache, evicting old entries if needed
     private func addToCache(url: URL, image: NSImage) {
-        // Simple FIFO eviction when cache is full
-        if cache.count >= maxCacheSize {
-            // Remove oldest entry (first key)
-            if let firstKey = cache.keys.first {
-                cache.removeValue(forKey: firstKey)
-            }
+        // If already in cache, just update the image (don't change order)
+        if cache[url] != nil {
+            cache[url] = image
+            return
         }
+
+        // FIFO eviction when cache is full
+        while cache.count >= maxCacheSize, !cacheOrder.isEmpty {
+            let oldestURL = cacheOrder.removeFirst()
+            cache.removeValue(forKey: oldestURL)
+        }
+
         cache[url] = image
+        cacheOrder.append(url)
     }
 
     /// Adds an image to the remote cache, evicting old entries if needed
     private func addToRemoteCache(url: URL, image: NSImage) {
-        // Simple FIFO eviction when cache is full
-        if remoteCache.count >= maxRemoteCacheSize {
-            if let firstKey = remoteCache.keys.first {
-                remoteCache.removeValue(forKey: firstKey)
-            }
+        // If already in cache, just update the image (don't change order)
+        if remoteCache[url] != nil {
+            remoteCache[url] = image
+            return
         }
+
+        // FIFO eviction when cache is full
+        while remoteCache.count >= maxRemoteCacheSize, !remoteCacheOrder.isEmpty {
+            let oldestURL = remoteCacheOrder.removeFirst()
+            remoteCache.removeValue(forKey: oldestURL)
+        }
+
         remoteCache[url] = image
+        remoteCacheOrder.append(url)
     }
 
     /// Clears the entire local image cache
     func clearCache() {
         cache.removeAll()
+        cacheOrder.removeAll()
     }
 
     /// Clears the remote image cache
     func clearRemoteCache() {
         remoteCache.removeAll()
+        remoteCacheOrder.removeAll()
     }
 
     /// Clears all caches (local and remote)
     func clearAllCaches() {
         cache.removeAll()
+        cacheOrder.removeAll()
         remoteCache.removeAll()
+        remoteCacheOrder.removeAll()
     }
 
     /// Cancels all active downloads
@@ -388,7 +421,9 @@ actor SecureImageLoader {
     /// Removes a specific image from the cache
     func evict(url: URL) {
         cache.removeValue(forKey: url)
+        cacheOrder.removeAll { $0 == url }
         remoteCache.removeValue(forKey: url)
+        remoteCacheOrder.removeAll { $0 == url }
     }
 
     /// Returns the current local cache size

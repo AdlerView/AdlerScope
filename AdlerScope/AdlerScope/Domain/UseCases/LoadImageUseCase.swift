@@ -16,13 +16,11 @@ actor LoadImageUseCase {
     // MARK: - Dependencies
 
     private let imageLoader: SecureImageLoader
-    private let sourceResolver: ImageSourceResolver
 
     // MARK: - Initialization
 
     init(imageLoader: SecureImageLoader) {
         self.imageLoader = imageLoader
-        self.sourceResolver = ImageSourceResolver()
     }
 
     // MARK: - Public Methods
@@ -44,7 +42,8 @@ actor LoadImageUseCase {
     ) async -> ImageLoadResult {
         // Resolve source string to typed ImageSource (must be on MainActor for SidecarManager)
         let imageSource = await MainActor.run {
-            sourceResolver.resolve(
+            let resolver = ImageSourceResolver()
+            return resolver.resolve(
                 source: source,
                 documentURL: documentURL,
                 sidecarManager: sidecarManager
