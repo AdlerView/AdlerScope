@@ -55,6 +55,8 @@ struct ImagePreviewView: View {
                         .aspectRatio(contentMode: .fit)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .accessibilityLabel(altText)
+                        .accessibilityHint(title ?? "")
+                        .help(title ?? "")  // macOS tooltip from CommonMark title
                 } else {
                     missingPlaceholder
                 }
@@ -97,6 +99,12 @@ struct ImagePreviewView: View {
 
     private var source: String {
         image.source ?? ""
+    }
+
+    /// Image title from CommonMark syntax: ![alt](url "title")
+    /// Used for tooltips and accessibility hints
+    private var title: String? {
+        image.title
     }
 
     /// Whether the image source is a remote URL

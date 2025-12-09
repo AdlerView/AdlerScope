@@ -14,7 +14,7 @@ struct SettingsViewModelTests {
 
     // MARK: - Tests
 
-    @Test("Load settings on initialization")
+    @Test("Load settings when explicitly called")
     @MainActor
     func testLoadSettingsOnInit() async {
         // Arrange
@@ -24,15 +24,15 @@ struct SettingsViewModelTests {
         let saveUseCase = SaveSettingsUseCase(settingsRepository: mockRepo)
         let validateUseCase = ValidateSettingsUseCase()
 
-        // Act
-        _ = SettingsViewModel(
+        // Act - SettingsViewModel does NOT load on init, views call loadSettingsIfNeeded()
+        let viewModel = SettingsViewModel(
             loadSettingsUseCase: loadUseCase,
             saveSettingsUseCase: saveUseCase,
             validateSettingsUseCase: validateUseCase
         )
 
-        // Wait for async load
-        try? await Task.sleep(for: .milliseconds(100))
+        // Explicitly trigger load as views would do via .task modifier
+        await viewModel.loadSettingsIfNeeded()
 
         // Assert
         #expect(mockRepo.loadCallCount >= 1)

@@ -109,8 +109,8 @@ struct AppSettingsBasicTestsInSettings {
         let customEditor = EditorSettings(openInlineLink: true, debug: true)
         let settings = AppSettings(editor: customEditor)
 
-        #expect(settings.editor.openInlineLink == true)
-        #expect(settings.editor.debug == true)
+        #expect(settings.editor?.openInlineLink == true)
+        #expect(settings.editor?.debug == true)
     }
 
     @Test("Singleton ID is consistent")
@@ -126,7 +126,7 @@ struct AppSettingsBasicTestsInSettings {
         let settings = AppSettings.default
         let validated = settings.validated()
 
-        #expect(validated.editor == settings.editor.validated())
+        #expect(validated.editor == settings.editor?.validated())
     }
 
     @Test("Can modify editor settings")
@@ -134,8 +134,8 @@ struct AppSettingsBasicTestsInSettings {
         let settings = AppSettings.default
         settings.editor = EditorSettings(openInlineLink: true, debug: true)
 
-        #expect(settings.editor.openInlineLink == true)
-        #expect(settings.editor.debug == true)
+        #expect(settings.editor?.openInlineLink == true)
+        #expect(settings.editor?.debug == true)
     }
 }
 
@@ -159,8 +159,8 @@ struct SettingsViewModelBasicTests {
         // Explicitly await load completion instead of relying on init's Task
         await viewModel.loadSettings()
 
-        #expect(viewModel.settings.editor.openInlineLink == true)
-        #expect(viewModel.settings.editor.debug == true)
+        #expect(viewModel.settings.editor?.openInlineLink == true)
+        #expect(viewModel.settings.editor?.debug == true)
     }
 
     @Test("Editor property provides access to editor settings")
@@ -178,8 +178,8 @@ struct SettingsViewModelBasicTests {
 
         viewModel.editor = EditorSettings(openInlineLink: true, debug: true)
 
-        #expect(viewModel.settings.editor.openInlineLink == true)
-        #expect(viewModel.settings.editor.debug == true)
+        #expect(viewModel.settings.editor?.openInlineLink == true)
+        #expect(viewModel.settings.editor?.debug == true)
     }
 
     @Test("Reset to defaults restores default settings")
@@ -247,8 +247,8 @@ struct SettingsIntegrationTests {
 
         // 3. Load again (should get modified settings)
         let reloaded = await loadUseCase.execute()
-        #expect(reloaded.editor.openInlineLink == true)
-        #expect(reloaded.editor.debug == true)
+        #expect(reloaded.editor?.openInlineLink == true)
+        #expect(reloaded.editor?.debug == true)
 
         // 4. Reset to defaults
         try await saveUseCase.resetToDefaults()
@@ -285,7 +285,7 @@ struct SettingsIntegrationTests {
 
         // Settings should be saved
         #expect(mockRepo.saveCallCount >= 1)
-        #expect(mockRepo.storedSettings?.editor.openInlineLink == true)
+        #expect(mockRepo.storedSettings?.editor?.openInlineLink == true)
     }
 
     @Test("Multiple rapid changes debounce correctly")

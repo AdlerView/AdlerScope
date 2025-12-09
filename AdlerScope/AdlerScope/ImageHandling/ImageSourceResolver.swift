@@ -7,10 +7,21 @@
 //  Handles path resolution for absolute paths, relative paths,
 //  sidecar images, and remote URLs.
 //
+//  CommonMark Compliance:
+//  - Supports angle-bracketed URLs: <url with spaces>
+//  - Processes backslash escapes: \) → )
+//  - Plain filenames resolve document-relative first, sidecar as fallback
+//
 
 import Foundation
 
 /// Resolves image source strings from markdown to typed ImageSource values
+///
+/// Resolution priority:
+/// 1. Remote URLs (http://, https://)
+/// 2. Absolute paths (/)
+/// 3. Explicit relative paths (./, ../)
+/// 4. Plain filenames: document-relative if file exists, otherwise sidecar
 struct ImageSourceResolver: Sendable {
 
     // MARK: - Public Methods
@@ -27,60 +38,103 @@ struct ImageSourceResolver: Sendable {
         documentURL: URL?,
         sidecarManager: SidecarManager?
     ) -> ImageSource {
-        let trimmed = source.trimmingCharacters(in: .whitespaces)
+        // Parse according to CommonMark rules (strips angle brackets, processes escapes)
+        let normalized = CommonMarkURLParser.parse(source)
+
+        // Empty source
+        guard !normalized.isEmpty else {
+            return .sidecar(filename: "", resolvedURL: nil)
+        }
 
         // 1. Remote URL (http:// or https://)
-        if isRemoteURL(trimmed) {
-            if let url = URL(string: trimmed) {
+        if isRemoteURL(normalized) {
+            if let url = URL(string: normalized) {
                 return .remote(url)
             }
             // Invalid URL - fall through to sidecar as fallback
         }
 
         // 2. Absolute path (starts with /)
-        if trimmed.hasPrefix("/") {
-            let url = URL(fileURLWithPath: trimmed).standardized
-            if FileManager.default.fileExists(atPath: url.path) {
-                return .absolute(url)
-            }
-            // File doesn't exist, but still return as absolute for error reporting
+        if normalized.hasPrefix("/") {
+            let url = URL(fileURLWithPath: normalized).standardized
             return .absolute(url)
         }
 
-        // 3. Relative path (starts with ./ or ../)
-        if trimmed.hasPrefix("./") || trimmed.hasPrefix("../") {
+        // 3. Explicit relative path (starts with ./ or ../)
+        if normalized.hasPrefix("./") || normalized.hasPrefix("../") {
             if let documentURL = documentURL {
                 let baseDir = documentURL.deletingLastPathComponent()
-                let resolvedURL = baseDir.appendingPathComponent(trimmed).standardized
+                let resolvedURL = baseDir.appendingPathComponent(normalized).standardized
                 return .documentRelative(resolvedURL)
             }
-            // No document URL - can't resolve relative path, fall through to sidecar
+            // No document URL - can't resolve relative path, fall through to plain filename
         }
 
-        // 4. Sidecar image (default - just a filename or relative path within sidecar)
+        // 4. Plain filename - CommonMark-compliant resolution
+        return resolvePlainFilename(normalized, documentURL: documentURL, sidecarManager: sidecarManager)
+    }
 
+    // MARK: - Private Resolution Methods
+
+    /// Resolves plain filenames with CommonMark-compliant priority
+    ///
+    /// Priority order:
+    /// 1. Document-relative (if file exists in document directory)
+    /// 2. Sidecar (if file exists in sidecar directory)
+    /// 3. Document-relative (for error reporting, even if not found)
+    @MainActor
+    private func resolvePlainFilename(
+        _ filename: String,
+        documentURL: URL?,
+        sidecarManager: SidecarManager?
+    ) -> ImageSource {
         // Security: Reject filenames with path traversal attempts
-        if containsPathTraversal(trimmed) {
-            return .sidecar(filename: trimmed, resolvedURL: nil)
+        if containsPathTraversal(filename) {
+            return .sidecar(filename: filename, resolvedURL: nil)
         }
 
-        let resolvedURL = sidecarManager?.resolveImage(filename: trimmed)
+        // Try document-relative first (CommonMark compliant)
+        if let documentURL = documentURL {
+            let baseDir = documentURL.deletingLastPathComponent()
+            let documentRelativeURL = baseDir.appendingPathComponent(filename).standardized
 
-        // Also check if it exists directly in sidecar directory
-        if resolvedURL == nil, let sidecarURL = sidecarManager?.sidecarURL {
-            let directURL = sidecarURL.appendingPathComponent(trimmed).standardized
-
-            // Security: Verify resolved URL is still within sidecar directory
-            guard directURL.path.hasPrefix(sidecarURL.path) else {
-                return .sidecar(filename: trimmed, resolvedURL: nil)
-            }
-
-            if FileManager.default.fileExists(atPath: directURL.path) {
-                return .sidecar(filename: trimmed, resolvedURL: directURL)
+            // Security: Ensure resolved URL is within document directory
+            if documentRelativeURL.path.hasPrefix(baseDir.path) {
+                if FileManager.default.fileExists(atPath: documentRelativeURL.path) {
+                    return .documentRelative(documentRelativeURL)
+                }
             }
         }
 
-        return .sidecar(filename: trimmed, resolvedURL: resolvedURL)
+        // Try sidecar (backward compatibility)
+        if let sidecarManager = sidecarManager {
+            // Check manifest first
+            if let sidecarURL = sidecarManager.resolveImage(filename: filename) {
+                return .sidecar(filename: filename, resolvedURL: sidecarURL)
+            }
+
+            // Check direct path in sidecar directory
+            if let sidecarDir = sidecarManager.sidecarURL {
+                let directURL = sidecarDir.appendingPathComponent(filename).standardized
+
+                // Security: Verify resolved URL is still within sidecar directory
+                if directURL.path.hasPrefix(sidecarDir.path) {
+                    if FileManager.default.fileExists(atPath: directURL.path) {
+                        return .sidecar(filename: filename, resolvedURL: directURL)
+                    }
+                }
+            }
+        }
+
+        // Default: document-relative (for error reporting, even if file not found)
+        if let documentURL = documentURL {
+            let baseDir = documentURL.deletingLastPathComponent()
+            let resolvedURL = baseDir.appendingPathComponent(filename).standardized
+            return .documentRelative(resolvedURL)
+        }
+
+        // No document context - fall back to sidecar
+        return .sidecar(filename: filename, resolvedURL: nil)
     }
 
     // MARK: - Private Helpers

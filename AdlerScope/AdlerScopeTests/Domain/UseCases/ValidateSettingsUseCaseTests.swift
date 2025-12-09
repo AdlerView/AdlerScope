@@ -25,8 +25,8 @@ struct ValidateSettingsUseCaseTests {
 
         let validated = await useCase.execute(settings)
 
-        #expect(validated.editor.openInlineLink == true)
-        #expect(validated.editor.debug == false)
+        #expect(validated.editor?.openInlineLink == true)
+        #expect(validated.editor?.debug == false)
     }
 
     @Test("Execute preserves valid settings")
@@ -41,8 +41,8 @@ struct ValidateSettingsUseCaseTests {
 
         let validated = await useCase.execute(settings)
 
-        #expect(validated.editor.openInlineLink == false)
-        #expect(validated.editor.debug == true)
+        #expect(validated.editor?.openInlineLink == false)
+        #expect(validated.editor?.debug == true)
     }
 
     @Test("Validate returns empty array for valid settings")
@@ -230,7 +230,7 @@ struct ValidateSettingsUseCaseIntegrationTests {
         let validated2 = await useCase.execute(validated1)
 
         // Both should produce the same validated result
-        #expect(validated1.editor.openInlineLink == validated2.editor.openInlineLink)
-        #expect(validated1.editor.debug == validated2.editor.debug)
+        #expect(validated1.editor?.openInlineLink == validated2.editor?.openInlineLink)
+        #expect(validated1.editor?.debug == validated2.editor?.debug)
     }
 }

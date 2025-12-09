@@ -30,8 +30,8 @@ struct LoadSettingsUseCaseTests {
         let result = await useCase.execute()
 
         #expect(mockRepo.loadCallCount == 1)
-        #expect(result.editor.openInlineLink == true)
-        #expect(result.editor.debug == false)
+        #expect(result.editor?.openInlineLink == true)
+        #expect(result.editor?.debug == false)
     }
 
     @MainActor
@@ -77,8 +77,8 @@ struct LoadSettingsUseCaseTests {
 
         #expect(mockRepo.loadCallCount == 1)
         // Settings should be validated (though current validation just returns same values)
-        #expect(result.editor.openInlineLink == true)
-        #expect(result.editor.debug == true)
+        #expect(result.editor?.openInlineLink == true)
+        #expect(result.editor?.debug == true)
     }
 
     @MainActor
@@ -150,7 +150,7 @@ struct LoadSettingsUseCaseErrorHandlingTests {
             let result = await useCase.execute()
 
             // Editor settings should always be present
-            #expect(result.editor.openInlineLink == false || result.editor.openInlineLink == true)
+            #expect(result.editor?.openInlineLink == false || result.editor?.openInlineLink == true)
         }
     }
 }

@@ -24,8 +24,8 @@ struct AppSettingsTests {
         let settings = AppSettings.default
 
         #expect(settings.id == AppSettings.singletonID)
-        #expect(settings.editor.openInlineLink == false)
-        #expect(settings.editor.debug == false)
+        #expect(settings.editor?.openInlineLink == false)
+        #expect(settings.editor?.debug == false)
     }
 
     @Test("Custom initialization with default ID")
@@ -34,8 +34,8 @@ struct AppSettingsTests {
         let settings = AppSettings(editor: editorSettings)
 
         #expect(settings.id == AppSettings.singletonID)
-        #expect(settings.editor.openInlineLink == editorSettings.openInlineLink)
-        #expect(settings.editor.debug == editorSettings.debug)
+        #expect(settings.editor?.openInlineLink == editorSettings.openInlineLink)
+        #expect(settings.editor?.debug == editorSettings.debug)
     }
 
     @Test("Custom initialization with custom ID")
@@ -67,8 +67,8 @@ struct AppSettingsTests {
 
         #expect(validated.id == settings.id)
         // Editor settings should be validated (though current validation just returns same)
-        #expect(validated.editor.openInlineLink == true)
-        #expect(validated.editor.debug == true)
+        #expect(validated.editor?.openInlineLink == true)
+        #expect(validated.editor?.debug == true)
     }
 
     @Test("Validated preserves ID")
@@ -88,8 +88,8 @@ struct AppSettingsTests {
 
         settings.editor = newEditor
 
-        #expect(settings.editor.openInlineLink == true)
-        #expect(settings.editor.debug == true)
+        #expect(settings.editor?.openInlineLink == true)
+        #expect(settings.editor?.debug == true)
     }
 
     @Test("Multiple default instances have same singleton ID")
@@ -112,8 +112,8 @@ struct AppSettingsValidationTests {
 
         let validated = settings.validated()
 
-        #expect(validated.editor.openInlineLink == false)
-        #expect(validated.editor.debug == false)
+        #expect(validated.editor?.openInlineLink == false)
+        #expect(validated.editor?.debug == false)
     }
 
     @Test("Validation preserves editor settings")
@@ -124,8 +124,8 @@ struct AppSettingsValidationTests {
         let validated = settings.validated()
 
         // Should preserve values (current validation doesn't change boolean settings)
-        #expect(validated.editor.openInlineLink == true)
-        #expect(validated.editor.debug == true)
+        #expect(validated.editor?.openInlineLink == true)
+        #expect(validated.editor?.debug == true)
     }
 
     @Test("Validation with all boolean combinations")
@@ -143,8 +143,8 @@ struct AppSettingsValidationTests {
 
             let validated = settings.validated()
 
-            #expect(validated.editor.openInlineLink == openInlineLink)
-            #expect(validated.editor.debug == debug)
+            #expect(validated.editor?.openInlineLink == openInlineLink)
+            #expect(validated.editor?.debug == debug)
         }
     }
 }
@@ -161,21 +161,21 @@ struct AppSettingsMainActorTests {
         settings.applyValidation()
 
         // Editor should be validated (but values unchanged for boolean properties)
-        #expect(settings.editor.openInlineLink == true)
-        #expect(settings.editor.debug == true)
+        #expect(settings.editor?.openInlineLink == true)
+        #expect(settings.editor?.debug == true)
     }
 
     @Test("applyValidation with default settings")
     func testApplyValidationWithDefaultSettings() async {
         let settings = AppSettings.default
-        let originalOpenInlineLink = settings.editor.openInlineLink
-        let originalDebug = settings.editor.debug
+        let originalOpenInlineLink = settings.editor?.openInlineLink
+        let originalDebug = settings.editor?.debug
 
         settings.applyValidation()
 
         // Should remain unchanged
-        #expect(settings.editor.openInlineLink == originalOpenInlineLink)
-        #expect(settings.editor.debug == originalDebug)
+        #expect(settings.editor?.openInlineLink == originalOpenInlineLink)
+        #expect(settings.editor?.debug == originalDebug)
     }
 
     @Test("applyValidation multiple times is idempotent")
@@ -189,7 +189,7 @@ struct AppSettingsMainActorTests {
         let afterSecond = settings.editor
 
         // Should be identical after multiple validations
-        #expect(afterFirst.openInlineLink == afterSecond.openInlineLink)
-        #expect(afterFirst.debug == afterSecond.debug)
+        #expect(afterFirst?.openInlineLink == afterSecond?.openInlineLink)
+        #expect(afterFirst?.debug == afterSecond?.debug)
     }
 }

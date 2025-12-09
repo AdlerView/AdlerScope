@@ -71,13 +71,13 @@ struct MockSettingsRepositoryLoadTests {
 
         #expect(mockRepo.loadCallCount == 1)
         #expect(result != nil)
-        #expect(result?.editor.openInlineLink != nil)
+        #expect(result?.editor?.openInlineLink != nil)
     }
 
     @Test("MockSettingsRepository.load() can return nil")
     func testMockLoadReturnsNil() async throws {
         let mockRepo = MockSettingsRepository.withDefaultSettings()
-        mockRepo.loadResult = nil
+        mockRepo.loadResult = .success(nil)  // Set result to success with nil settings
 
         let result = try await mockRepo.load()
 
