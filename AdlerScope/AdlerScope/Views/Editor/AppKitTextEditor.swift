@@ -17,17 +17,20 @@ struct AppKitTextEditor: NSViewRepresentable {
     let formatActions: FormatMenuActions?
     let editActions: EditMenuActions?
     let imageDropHandler: ImageDropHandler?
+    let zoomManager: ZoomManager?
 
     init(
         text: Binding<String>,
         formatActions: FormatMenuActions?,
         editActions: EditMenuActions?,
-        imageDropHandler: ImageDropHandler? = nil
+        imageDropHandler: ImageDropHandler? = nil,
+        zoomManager: ZoomManager? = nil
     ) {
         self._text = text
         self.formatActions = formatActions
         self.editActions = editActions
         self.imageDropHandler = imageDropHandler
+        self.zoomManager = zoomManager
     }
 
     /// Coordinator manages NSTextView delegate callbacks and text synchronization
@@ -72,9 +75,55 @@ struct AppKitTextEditor: NSViewRepresentable {
 
     // MARK: - Custom NSTextView for Drag-and-Drop
 
-    /// Custom NSTextView subclass that handles image drag-and-drop
+    /// Custom NSTextView subclass that handles image drag-and-drop and zoom gestures
     final class ImageDropTextView: NSTextView {
         weak var imageDropHandler: ImageDropHandler?
+        weak var zoomManager: ZoomManager?
+
+        // MARK: - Zoom Gesture Handling
+
+        override func magnify(with event: NSEvent) {
+            guard let zoomManager = zoomManager else {
+                super.magnify(with: event)
+                return
+            }
+
+            zoomManager.handleMagnifyGesture(
+                phase: event.phase,
+                magnification: event.magnification
+            )
+        }
+
+        override func smartMagnify(with event: NSEvent) {
+            guard let zoomManager = zoomManager else {
+                super.smartMagnify(with: event)
+                return
+            }
+
+            zoomManager.handleSmartMagnify()
+        }
+
+        // MARK: - Accessibility
+
+        override func accessibilityLabel() -> String? {
+            return "Markdown editor"
+        }
+
+        override func accessibilityRoleDescription() -> String? {
+            return "Text editor with zoom support"
+        }
+
+        override func accessibilityPerformIncrement() -> Bool {
+            zoomManager?.zoomIn()
+            return true
+        }
+
+        override func accessibilityPerformDecrement() -> Bool {
+            zoomManager?.zoomOut()
+            return true
+        }
+
+        // MARK: - Drag-and-Drop Handling
 
         override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
             // Check if we can handle this drag
@@ -165,6 +214,9 @@ struct AppKitTextEditor: NSViewRepresentable {
         textView.imageDropHandler = imageDropHandler
         textView.registerForDraggedTypes(ImageDropHandler.acceptedDragTypes)
 
+        // Configure zoom manager
+        textView.zoomManager = zoomManager
+
         // Set initial text
         textView.string = text
 
@@ -181,9 +233,10 @@ struct AppKitTextEditor: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         guard let textView = scrollView.documentView as? NSTextView else { return }
 
-        // Update image drop handler reference
+        // Update image drop handler and zoom manager references
         if let imageDropTextView = textView as? ImageDropTextView {
             imageDropTextView.imageDropHandler = imageDropHandler
+            imageDropTextView.zoomManager = zoomManager
         }
 
         // Only update if text changed from outside (binding update)
@@ -200,6 +253,13 @@ struct AppKitTextEditor: NSViewRepresentable {
             }
 
             context.coordinator.isUpdatingFromBinding = false
+        }
+
+        // Check if we need to apply zoom (from zoom manager)
+        if let zoomManager = zoomManager,
+           let zoomLevel = zoomManager.pendingZoomUpdate {
+            applyZoomLevel(zoomLevel, to: textView, baseSize: zoomManager.basePointSize)
+            zoomManager.pendingZoomUpdate = nil
         }
 
         // Check if we need to insert text at cursor (from format actions)
@@ -231,6 +291,54 @@ struct AppKitTextEditor: NSViewRepresentable {
             // Move cursor after inserted text
             let newPosition = selectedRange.location + text.count
             textView.setSelectedRange(NSRange(location: newPosition, length: 0))
+        }
+    }
+
+    // MARK: - Zoom Application
+
+    /// Applies zoom level by scaling fonts in text storage
+    /// - Parameters:
+    ///   - zoomLevel: Target zoom level (1.0 = 100%)
+    ///   - textView: The NSTextView to apply zoom to
+    ///   - baseSize: Base font size to scale from
+    private func applyZoomLevel(_ zoomLevel: CGFloat, to textView: NSTextView, baseSize: CGFloat) {
+        guard let textStorage = textView.textStorage else { return }
+
+        // Preserve selection and visible rect
+        let selectedRanges = textView.selectedRanges
+        let visibleRect = textView.enclosingScrollView?.documentVisibleRect ?? .zero
+
+        // Calculate scaled font size
+        let scaledSize = baseSize * zoomLevel
+
+        textStorage.beginEditing()
+
+        // Scale all fonts in the text storage
+        let fullRange = NSRange(location: 0, length: textStorage.length)
+        textStorage.enumerateAttribute(.font, in: fullRange, options: []) { value, range, _ in
+            if let currentFont = value as? NSFont {
+                // Create scaled version of the font
+                let scaledFont = NSFont(descriptor: currentFont.fontDescriptor, size: scaledSize) ?? currentFont
+                textStorage.addAttribute(.font, value: scaledFont, range: range)
+            }
+        }
+
+        textStorage.endEditing()
+
+        // Update typing attributes for new text
+        var typingAttrs = textView.typingAttributes
+        if let font = typingAttrs[.font] as? NSFont {
+            let scaledFont = NSFont(descriptor: font.fontDescriptor, size: scaledSize) ?? font
+            typingAttrs[.font] = scaledFont
+            textView.typingAttributes = typingAttrs
+        }
+
+        // Restore selection
+        textView.selectedRanges = selectedRanges
+
+        // Attempt to maintain visible area (approximate)
+        if visibleRect != .zero {
+            textView.scrollToVisible(visibleRect)
         }
     }
 }

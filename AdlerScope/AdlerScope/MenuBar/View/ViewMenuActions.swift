@@ -12,8 +12,13 @@
 //  - Zoom controls (Zoom In, Zoom Out, Actual Size)
 //
 
+#if os(macOS)
 import SwiftUI
 import Observation
+#else
+import SwiftUI
+import Observation
+#endif
 
 /// View mode options for the markdown editor
 enum ViewMode: String, Codable, CaseIterable {
@@ -68,16 +73,12 @@ final class ViewMenuActions {
     /// Current preview theme
     var previewTheme: PreviewTheme = .default
 
-    // MARK: - Zoom State
+    // MARK: - Zoom Manager
 
-    /// Current zoom level (0.5 to 3.0, default 1.0 = 100%)
-    var zoomLevel: CGFloat = 1.0
-
-    // MARK: - Constants
-
-    private let minZoom: CGFloat = 0.5
-    private let maxZoom: CGFloat = 3.0
-    private let zoomStep: CGFloat = 0.1
+    #if os(macOS)
+    /// Zoom manager for trackpad gestures and font scaling
+    let zoomManager = ZoomManager()
+    #endif
 
     // MARK: - View Mode Switching
 
@@ -169,25 +170,58 @@ final class ViewMenuActions {
 
     // MARK: - Zoom Controls
 
+    #if os(macOS)
     /// Increases zoom level by 10% (max 300%)
     func zoomIn() {
-        zoomLevel = min(zoomLevel + zoomStep, maxZoom)
+        zoomManager.zoomIn()
     }
 
     /// Decreases zoom level by 10% (min 50%)
     func zoomOut() {
-        zoomLevel = max(zoomLevel - zoomStep, minZoom)
+        zoomManager.zoomOut()
     }
 
     /// Resets zoom to 100% (actual size)
     func resetZoom() {
-        zoomLevel = 1.0
+        zoomManager.resetZoom()
     }
 
     // MARK: - Computed Properties
 
     /// Human-readable zoom percentage
     var zoomPercentage: Int {
-        Int(zoomLevel * 100)
+        zoomManager.zoomPercentage
     }
+
+    /// Current zoom level (for external access)
+    /// Returns visualZoomLevel for smooth preview updates during gestures
+    var zoomLevel: CGFloat {
+        zoomManager.visualZoomLevel
+    }
+    #else
+    /// Increases zoom level by 10% (max 300%)
+    func zoomIn() {
+        // iOS placeholder
+    }
+
+    /// Decreases zoom level by 10% (min 50%)
+    func zoomOut() {
+        // iOS placeholder
+    }
+
+    /// Resets zoom to 100% (actual size)
+    func resetZoom() {
+        // iOS placeholder
+    }
+
+    /// Human-readable zoom percentage
+    var zoomPercentage: Int {
+        100
+    }
+
+    /// Current zoom level (for external access)
+    var zoomLevel: CGFloat {
+        1.0
+    }
+    #endif
 }

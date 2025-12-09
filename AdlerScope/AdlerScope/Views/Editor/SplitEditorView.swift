@@ -49,7 +49,8 @@ struct SplitEditorView: View {
                     text: $document.content,
                     formatActions: viewModel.formatActions,
                     editActions: viewModel.editActions,
-                    imageDropHandler: imageDropHandler
+                    imageDropHandler: imageDropHandler,
+                    zoomManager: viewModel.viewActions.zoomManager
                 )
                 .applyFormatCommands(formatActions: viewModel.formatActions, onSync: syncText)
                 .applyEditCommands(editActions: viewModel.editActions, onSync: syncText)
@@ -57,20 +58,33 @@ struct SplitEditorView: View {
 
             case .previewOnly:
                 // Preview Only Mode
-                PreviewView(document: viewModel.renderedDocument, sidecarManager: sidecarManager)
+                PreviewView(
+                    document: viewModel.renderedDocument,
+                    sidecarManager: sidecarManager,
+                    zoomLevel: viewModel.zoomLevel,
+                    onZoomIn: viewModel.zoomIn,
+                    onZoomOut: viewModel.zoomOut
+                )
 
             case .split:
                 // Split View Mode
                 HSplitView {
                     if viewModel.swapPanes {
                         // Swapped: Preview on left, Editor on right
-                        PreviewView(document: viewModel.renderedDocument, sidecarManager: sidecarManager)
+                        PreviewView(
+                            document: viewModel.renderedDocument,
+                            sidecarManager: sidecarManager,
+                            zoomLevel: viewModel.zoomLevel,
+                            onZoomIn: viewModel.zoomIn,
+                            onZoomOut: viewModel.zoomOut
+                        )
 
                         AppKitTextEditor(
                             text: $document.content,
                             formatActions: viewModel.formatActions,
                             editActions: viewModel.editActions,
-                            imageDropHandler: imageDropHandler
+                            imageDropHandler: imageDropHandler,
+                            zoomManager: viewModel.viewActions.zoomManager
                         )
                         .applyFormatCommands(formatActions: viewModel.formatActions, onSync: syncText)
                         .applyEditCommands(editActions: viewModel.editActions, onSync: syncText)
@@ -81,13 +95,20 @@ struct SplitEditorView: View {
                             text: $document.content,
                             formatActions: viewModel.formatActions,
                             editActions: viewModel.editActions,
-                            imageDropHandler: imageDropHandler
+                            imageDropHandler: imageDropHandler,
+                            zoomManager: viewModel.viewActions.zoomManager
                         )
                         .applyFormatCommands(formatActions: viewModel.formatActions, onSync: syncText)
                         .applyEditCommands(editActions: viewModel.editActions, onSync: syncText)
                         .focusedSceneValue(\.editorText, $document.content)
 
-                        PreviewView(document: viewModel.renderedDocument, sidecarManager: sidecarManager)
+                        PreviewView(
+                            document: viewModel.renderedDocument,
+                            sidecarManager: sidecarManager,
+                            zoomLevel: viewModel.zoomLevel,
+                            onZoomIn: viewModel.zoomIn,
+                            onZoomOut: viewModel.zoomOut
+                        )
                     }
                 }
             }
@@ -103,7 +124,13 @@ struct SplitEditorView: View {
 
                 Divider()
 
-                PreviewView(document: viewModel.renderedDocument, sidecarManager: sidecarManager)
+                PreviewView(
+                    document: viewModel.renderedDocument,
+                    sidecarManager: sidecarManager,
+                    zoomLevel: viewModel.zoomLevel,
+                    onZoomIn: viewModel.zoomIn,
+                    onZoomOut: viewModel.zoomOut
+                )
             }
             #endif
         }
