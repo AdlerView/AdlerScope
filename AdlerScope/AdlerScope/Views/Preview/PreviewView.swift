@@ -13,11 +13,23 @@ import Markdown
 struct PreviewView: View {
     let document: Document?
     let sidecarManager: SidecarManager?
+    let zoomLevel: CGFloat
+    let onZoomIn: (() -> Void)?
+    let onZoomOut: (() -> Void)?
     @Environment(SettingsViewModel.self) private var settingsViewModel
 
-    init(document: Document?, sidecarManager: SidecarManager? = nil) {
+    init(
+        document: Document?,
+        sidecarManager: SidecarManager? = nil,
+        zoomLevel: CGFloat = 1.0,
+        onZoomIn: (() -> Void)? = nil,
+        onZoomOut: (() -> Void)? = nil
+    ) {
         self.document = document
         self.sidecarManager = sidecarManager
+        self.zoomLevel = zoomLevel
+        self.onZoomIn = onZoomIn
+        self.onZoomOut = onZoomOut
     }
 
     var body: some View {
@@ -34,6 +46,12 @@ struct PreviewView: View {
                 }
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .scaleEffect(zoomLevel, anchor: .topLeading)
+                .animation(
+                    AccessibilityHelpers.shouldReduceMotion ? .none : .interactiveSpring(duration: 0.2),
+                    value: zoomLevel
+                )
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             } else {
                 VStack(spacing: 12) {
                     Image(systemName: "doc.text")
@@ -52,6 +70,20 @@ struct PreviewView: View {
             }
         }
         .background(Color.Markdown.textBackground)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Markdown preview")
+        .accessibilityHint("Pinch to zoom or use View menu zoom commands")
+        .accessibilityValue("Zoom level: \(Int(zoomLevel * 100)) percent")
+        .accessibilityZoomAction { action in
+            switch action.direction {
+            case .zoomIn:
+                onZoomIn?()
+            case .zoomOut:
+                onZoomOut?()
+            @unknown default:
+                break
+            }
+        }
     }
 }
 
