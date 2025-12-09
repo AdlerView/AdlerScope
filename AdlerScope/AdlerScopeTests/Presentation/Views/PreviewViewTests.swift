@@ -55,16 +55,16 @@ struct PreviewViewTests {
     @Test("Passes openInlineLinks setting to child views")
     func testClosure1InClosure1PassesSettings() {
         let settingsViewModel = createMockSettingsViewModel()
-        settingsViewModel.settings.editor.openInlineLink = true
+        settingsViewModel.editor.openInlineLink = true
 
         let document = createMockDocument(markdown: "# Test")
 
         let view = PreviewView(document: document)
 
-        // The closure passes settingsViewModel.settings.editor.openInlineLink
+        // The closure passes settingsViewModel.editor.openInlineLink
         _ = view.body
 
-        #expect(settingsViewModel.settings.editor?.openInlineLink == true)
+        #expect(settingsViewModel.editor.openInlineLink == true)
     }
 
     @Test("Responds to settings changes")
@@ -73,12 +73,12 @@ struct PreviewViewTests {
         let document = createMockDocument(markdown: "[Link](https://example.com)")
 
         // Change setting
-        settingsViewModel.settings.editor.openInlineLink = false
+        settingsViewModel.editor.openInlineLink = false
 
         _ = PreviewView(document: document)
             .environment(settingsViewModel)
 
-        #expect(settingsViewModel.settings.editor?.openInlineLink == false)
+        #expect(settingsViewModel.editor.openInlineLink == false)
     }
 
     // MARK: - Integration Tests

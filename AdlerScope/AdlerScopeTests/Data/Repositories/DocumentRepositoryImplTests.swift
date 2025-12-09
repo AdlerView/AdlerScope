@@ -152,8 +152,13 @@ struct DocumentRepositoryImplTests {
         // Act
         let type = await repo.detectFileType(at: url)
 
-        // Assert
-        #expect(type == .plainText)
+        // Assert - returns Quarto type if registered, otherwise plainText
+        let quartoType = UTType("org.quarto.qmd")
+        if let qmd = quartoType {
+            #expect(type == qmd || type == .plainText)
+        } else {
+            #expect(type == .plainText)
+        }
     }
 
     @Test("Create backup successfully")

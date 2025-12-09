@@ -32,8 +32,8 @@ struct SaveSettingsUseCaseTests {
 
         #expect(mockRepo.saveCallCount == 1)
         #expect(mockRepo.lastSavedSettings != nil)
-        #expect(mockRepo.lastSavedSettings?.editor.openInlineLink == true)
-        #expect(mockRepo.lastSavedSettings?.editor.debug == false)
+        #expect(mockRepo.lastSavedSettings?.editor?.openInlineLink == true)
+        #expect(mockRepo.lastSavedSettings?.editor?.debug == false)
     }
 
     @MainActor
@@ -55,8 +55,8 @@ struct SaveSettingsUseCaseTests {
         #expect(mockRepo.saveCallCount == 1)
         #expect(mockRepo.lastSavedSettings != nil)
         // Settings should be validated (though current validation just returns same values)
-        #expect(mockRepo.lastSavedSettings?.editor.openInlineLink == false)
-        #expect(mockRepo.lastSavedSettings?.editor.debug == true)
+        #expect(mockRepo.lastSavedSettings?.editor?.openInlineLink == false)
+        #expect(mockRepo.lastSavedSettings?.editor?.debug == true)
     }
 
     @MainActor
@@ -133,8 +133,8 @@ struct SaveSettingsUseCaseValidationTests {
         let useCase = SaveSettingsUseCase(settingsRepository: mockRepo)
         try await useCase.execute(validSettings)
 
-        #expect(mockRepo.lastSavedSettings?.editor.openInlineLink == false)
-        #expect(mockRepo.lastSavedSettings?.editor.debug == false)
+        #expect(mockRepo.lastSavedSettings?.editor?.openInlineLink == false)
+        #expect(mockRepo.lastSavedSettings?.editor?.debug == false)
     }
 
     @MainActor
@@ -161,8 +161,8 @@ struct SaveSettingsUseCaseValidationTests {
             let useCase = SaveSettingsUseCase(settingsRepository: mockRepo)
             try await useCase.execute(settings)
 
-            #expect(mockRepo.lastSavedSettings?.editor.openInlineLink == openInlineLink)
-            #expect(mockRepo.lastSavedSettings?.editor.debug == debug)
+            #expect(mockRepo.lastSavedSettings?.editor?.openInlineLink == openInlineLink)
+            #expect(mockRepo.lastSavedSettings?.editor?.debug == debug)
         }
 
         #expect(mockRepo.saveCallCount == 4)
@@ -240,11 +240,11 @@ struct SaveSettingsUseCaseIntegrationTests {
 
         let settings1 = AppSettings(editor: EditorSettings(openInlineLink: false, debug: false))
         try await useCase.execute(settings1)
-        let saved1OpenInlineLink = mockRepo.lastSavedSettings?.editor.openInlineLink
+        let saved1OpenInlineLink = mockRepo.lastSavedSettings?.editor?.openInlineLink
 
         let settings2 = AppSettings(editor: EditorSettings(openInlineLink: true, debug: true))
         try await useCase.execute(settings2)
-        let saved2OpenInlineLink = mockRepo.lastSavedSettings?.editor.openInlineLink
+        let saved2OpenInlineLink = mockRepo.lastSavedSettings?.editor?.openInlineLink
 
         #expect(mockRepo.saveCallCount == 2)
         #expect(saved1OpenInlineLink == false)

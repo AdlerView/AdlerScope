@@ -47,8 +47,8 @@ struct SettingsRepositoryImplTests {
 
         let loaded = try await repository.load()
         #expect(loaded != nil)
-        #expect(loaded?.editor.openInlineLink == true)
-        #expect(loaded?.editor.debug == false)
+        #expect(loaded?.editor?.openInlineLink == true)
+        #expect(loaded?.editor?.debug == false)
     }
 
     @Test("Save updates existing settings")
@@ -76,8 +76,8 @@ struct SettingsRepositoryImplTests {
 
         // Load and verify
         let loaded = try await repository.load()
-        #expect(loaded?.editor.openInlineLink == true)
-        #expect(loaded?.editor.debug == true)
+        #expect(loaded?.editor?.openInlineLink == true)
+        #expect(loaded?.editor?.debug == true)
     }
 
     @Test("Save preserves singleton ID")
@@ -172,7 +172,7 @@ struct SettingsRepositoryImplIntegrationTests {
 
         // 3. Load settings
         let loaded1 = try await repository.load()
-        #expect(loaded1?.editor.openInlineLink == false)
+        #expect(loaded1?.editor?.openInlineLink == false)
 
         // 4. Update settings
         let settings2 = AppSettings(
@@ -182,7 +182,7 @@ struct SettingsRepositoryImplIntegrationTests {
 
         // 5. Load updated settings
         let loaded2 = try await repository.load()
-        #expect(loaded2?.editor.openInlineLink == true)
+        #expect(loaded2?.editor?.openInlineLink == true)
 
         // 6. Reset to defaults
         try await repository.resetToDefaults()
@@ -209,8 +209,8 @@ struct SettingsRepositoryImplIntegrationTests {
 
         // Last save should be persisted
         let loaded = try await repository.load()
-        #expect(loaded?.editor.openInlineLink == true) // i=4, 4%2==0 is true
-        #expect(loaded?.editor.debug == false) // i=4, 4%2==1 is false
+        #expect(loaded?.editor?.openInlineLink == true) // i=4, 4%2==0 is true
+        #expect(loaded?.editor?.debug == false) // i=4, 4%2==1 is false
     }
 
     @Test("hasSettings is consistent with load")
@@ -310,8 +310,8 @@ struct SettingsRepositoryImplEdgeCaseTests {
         try await repository.save(newSettings)
 
         let loaded = try await repository.load()
-        #expect(loaded?.editor.openInlineLink == true)
-        #expect(loaded?.editor.debug == true)
+        #expect(loaded?.editor?.openInlineLink == true)
+        #expect(loaded?.editor?.debug == true)
     }
 }
 
@@ -339,8 +339,8 @@ struct SettingsRepositoryImplPersistenceTests {
         let repo2 = SettingsRepositoryImpl(modelContext: context)
         let loaded = try await repo2.load()
 
-        #expect(loaded?.editor.openInlineLink == true)
-        #expect(loaded?.editor.debug == false)
+        #expect(loaded?.editor?.openInlineLink == true)
+        #expect(loaded?.editor?.debug == false)
     }
 
     @Test("Editor settings are deeply persisted")
@@ -357,7 +357,7 @@ struct SettingsRepositoryImplPersistenceTests {
         try await repository.save(settings)
         let loaded = try await repository.load()
 
-        #expect(loaded?.editor.openInlineLink == false)
-        #expect(loaded?.editor.debug == true)
+        #expect(loaded?.editor?.openInlineLink == false)
+        #expect(loaded?.editor?.debug == true)
     }
 }
